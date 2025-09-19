@@ -1,0 +1,20 @@
+[gd_scene load_steps=6 format=3 uid="uid://djsu6kddrf6gg"]
+
+[ext_resource type="Script" uid="uid://dcsnkcxfhjtda" path="res://src/astar_grid_map/astar_map.gd" id="1_jyhfs"]
+[ext_resource type="PackedScene" uid="uid://o0e2fvowo4vp" path="res://scenes/astar_grid_map/astar_grid_map.tscn" id="1_sugp2"]
+[ext_resource type="Script" uid="uid://b2j7kije6k1tr" path="res://src/main.gd" id="1_tbgi4"]
+[ext_resource type="MeshLibrary" uid="uid://cthxb71wvpyy2" path="res://assets/materials/astar_mat/astar_mesh.tres" id="2_jyhfs"]
+[ext_resource type="Script" uid="uid://de86e72p5aj4w" path="res://src/astar_grid_map/astar_grid_map.gd" id="3_tbgi4"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_tbgi4")
+
+[node name="AstarMap" type="Node3D" parent="."]
+script = ExtResource("1_jyhfs")
+
+[node name="AstarGridMap" parent="AstarMap" instance=ExtResource("1_sugp2")]
+mesh_library = ExtResource("2_jyhfs")
+script = ExtResource("3_tbgi4")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 2.0787072, 6.425317, 0)

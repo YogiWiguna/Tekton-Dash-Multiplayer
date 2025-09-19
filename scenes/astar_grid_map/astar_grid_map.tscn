@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://o0e2fvowo4vp"]
+
+[ext_resource type="Script" uid="uid://dlbrmk11kf3l5" path="res://scenes/astar_grid_map/astar_grid_map.gd" id="1_3l12q"]
+[ext_resource type="MeshLibrary" uid="uid://cthxb71wvpyy2" path="res://assets/materials/astar_mat/astar_mesh.tres" id="1_bd6my"]
+
+[node name="astar_grid_map" type="GridMap"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+mesh_library = ExtResource("1_bd6my")
+cell_size = Vector3(1, 1, 1)
+cell_scale = 0.25
+script = ExtResource("1_3l12q")
