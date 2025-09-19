@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://dadycnfg2q5tm"]
+
+[ext_resource type="Texture2D" uid="uid://jghfnhynvicf" path="res://assets/meshes/tiles_mesh/boost_texture/boost_down.png" id="1_sapfx"]
+
+[resource]
+resource_name = "boost_down"
+cull_mode = 2
+albedo_texture = ExtResource("1_sapfx")
+roughness = 0.5

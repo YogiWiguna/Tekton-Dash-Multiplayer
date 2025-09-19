@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://d1c14h4loxqtu"]
+
+[ext_resource type="Texture2D" uid="uid://ympckxynchj1" path="res://assets/meshes/tiles_mesh/tile_spawn_texture/heart_spawn_tile_tex.png" id="1_2mp8u"]
+
+[resource]
+resource_name = "heart_tile_spawn"
+cull_mode = 2
+albedo_texture = ExtResource("1_2mp8u")
+roughness = 0.5

@@ -1,0 +1,11 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://c6o6dyxxqufd8"]
+
+[ext_resource type="Texture2D" uid="uid://gf5melv14yiv" path="res://assets/meshes/tiles_mesh/tiles_texture/tile_coin.png" id="1_c04n2"]
+
+[resource]
+resource_name = "coin"
+transparency = 1
+cull_mode = 2
+albedo_texture = ExtResource("1_c04n2")
+emission_enabled = true
+emission_energy_multiplier = 5.0

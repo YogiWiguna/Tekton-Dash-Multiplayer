@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://crhe22wgso03m"]
+
+[ext_resource type="Texture2D" uid="uid://dsvkhd6urxvr8" path="res://assets/meshes/tiles_mesh/boost_texture/boost_left.png" id="1_hlhd0"]
+
+[resource]
+resource_name = "boost_left"
+cull_mode = 2
+albedo_texture = ExtResource("1_hlhd0")
+roughness = 0.5

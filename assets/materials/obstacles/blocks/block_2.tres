@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://c8qxikbr7wnig"]
+
+[ext_resource type="Texture2D" uid="uid://c0e3o1bfwb4dq" path="res://assets/meshes/block_mesh/block_texture/block_2.png" id="1_cu6wf"]
+
+[resource]
+resource_name = "block_2"
+cull_mode = 2
+albedo_texture = ExtResource("1_cu6wf")
+roughness = 0.5

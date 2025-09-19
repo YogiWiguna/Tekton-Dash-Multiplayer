@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="InventoryItem" load_steps=4 format=3 uid="uid://dvra60p28pt01"]
+
+[ext_resource type="Script" uid="uid://bjqt8wx4ukwek" path="res://src/player_board_and_blue_print/player_board_item.gd" id="1_lopmc"]
+[ext_resource type="Texture2D" uid="uid://ce43iyn3lo2og" path="res://assets/materials/player_board_and_blue_print/tiles_hologram_texture.tres" id="2_4tei6"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2nfir"]
+atlas = ExtResource("2_4tei6")
+region = Rect2(30, 30, 30, 30)
+
+[resource]
+script = ExtResource("1_lopmc")
+item_name = "heart_hologram"
+texture = SubResource("AtlasTexture_2nfir")

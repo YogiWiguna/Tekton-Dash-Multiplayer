@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://ve7spnodjeak"]
+
+[ext_resource type="Texture2D" uid="uid://bytuk0yjg5q1x" path="res://assets/meshes/tiles_mesh/boost_texture/boost_special_1.png" id="1_abb2k"]
+
+[resource]
+resource_name = "boost_special_1"
+cull_mode = 2
+albedo_texture = ExtResource("1_abb2k")
+roughness = 0.5

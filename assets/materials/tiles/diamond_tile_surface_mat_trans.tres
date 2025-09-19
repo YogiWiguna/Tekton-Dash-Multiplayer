@@ -1,0 +1,13 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://dbgnjsmjroiiw"]
+
+[ext_resource type="Texture2D" uid="uid://r6sufq8a4en3" path="res://assets/meshes/tiles_mesh/tiles_texture/tile_diamond_stack.png" id="1_ytpwi"]
+
+[resource]
+resource_name = "diamond"
+transparency = 1
+blend_mode = 4
+cull_mode = 2
+albedo_color = Color(1, 1, 1, 0.513726)
+albedo_texture = ExtResource("1_ytpwi")
+emission_enabled = true
+emission_energy_multiplier = 5.0

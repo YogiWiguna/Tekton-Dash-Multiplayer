@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3 uid="uid://mvhhwhk3ok1b"]
+
+[ext_resource type="ArrayMesh" uid="uid://b0u70c6bmgx4t" path="res://assets/meshes/tiles_mesh/tile_mesh.obj" id="1_ih2iv"]
+[ext_resource type="Script" uid="uid://5f7g02sr3hx3" path="res://scenes/floor_and_tiles/token_tile.gd" id="2_p2s6a"]
+
+[node name="token_tile" type="MeshInstance3D"]
+mesh = ExtResource("1_ih2iv")
+skeleton = NodePath("")
+script = ExtResource("2_p2s6a")

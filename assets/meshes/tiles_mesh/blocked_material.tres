@@ -1,0 +1,25 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3 uid="uid://ca2l865avhl76"]
+
+[ext_resource type="Shader" uid="uid://xe6cxapqiej0" path="res://assets/meshes/tiles_mesh/hightlighter.gdshader" id="1_t3ckp"]
+[ext_resource type="Texture2D" uid="uid://byrorc08t6wxh" path="res://assets/meshes/tiles_mesh/blocked.png" id="2_t3ckp"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_t3ckp")
+shader_parameter/scroll_speed = Vector2(0.5, 0.5)
+shader_parameter/uv_scale = Vector2(3, 3)
+shader_parameter/uv_offset = Vector2(0, 0)
+shader_parameter/emission_texture = ExtResource("2_t3ckp")
+shader_parameter/emission_energy = 3.0
+shader_parameter/modulate = Color(0.212305, 0.212305, 0.212305, 1)
+shader_parameter/normal_fade = 0.0
+shader_parameter/albedo_mix = 1.0
+shader_parameter/emission_color = Color(1, 0, 0.0166664, 1)
+shader_parameter/emission_alpha_influence = 1.0
+shader_parameter/emission_threshold = 0.5
+shader_parameter/emission_softness = 0.1
+shader_parameter/project_on_x = true
+shader_parameter/project_on_y = true
+shader_parameter/project_on_z = true
+shader_parameter/projection_angle_threshold = 0.5
+shader_parameter/projection_smoothness = 0.1

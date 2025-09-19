@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://bmiokcbc0yym"]
+
+[ext_resource type="Texture2D" uid="uid://brvtuwaxrufmw" path="res://assets/meshes/tiles_mesh/tile_spawn_texture/diamond_spawn_tile_tex.png" id="1_2qv1y"]
+
+[resource]
+resource_name = "diamond_tile_spawn"
+cull_mode = 2
+albedo_texture = ExtResource("1_2qv1y")
+roughness = 0.5

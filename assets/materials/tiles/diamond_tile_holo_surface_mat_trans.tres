@@ -1,0 +1,13 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://xqti6xr46qev"]
+
+[ext_resource type="Texture2D" uid="uid://ca3xt2x0jlu4v" path="res://assets/meshes/tiles_mesh/tiles_texture/tile_diamond_holo_stacked.png" id="1_3dy2n"]
+
+[resource]
+resource_name = "diamond_hologram"
+transparency = 1
+blend_mode = 4
+cull_mode = 2
+albedo_color = Color(1, 1, 1, 0.513726)
+albedo_texture = ExtResource("1_3dy2n")
+emission_enabled = true
+emission_energy_multiplier = 5.0

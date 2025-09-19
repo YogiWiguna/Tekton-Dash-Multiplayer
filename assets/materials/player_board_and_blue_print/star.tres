@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="InventoryItem" load_steps=4 format=3 uid="uid://iotcvvk8141"]
+
+[ext_resource type="Script" uid="uid://bjqt8wx4ukwek" path="res://src/player_board_and_blue_print/player_board_item.gd" id="1_pnuct"]
+[ext_resource type="Texture2D" uid="uid://dl828br24c28d" path="res://assets/materials/player_board_and_blue_print/tiles_texture.tres" id="2_r53mm"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_i1fcm"]
+atlas = ExtResource("2_r53mm")
+region = Rect2(30, 0, 30, 30)
+
+[resource]
+script = ExtResource("1_pnuct")
+item_id = 1
+item_name = "star"
+texture = SubResource("AtlasTexture_i1fcm")

@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://ts51o6sloy2o"]
+
+[ext_resource type="Texture2D" uid="uid://dmpjt3w53rsd7" path="res://assets/meshes/tiles_mesh/tile_spawn_texture/star_spawn_tile_tex.png" id="1_57xjr"]
+
+[resource]
+resource_name = "star_tile_spawn"
+cull_mode = 2
+albedo_texture = ExtResource("1_57xjr")
+roughness = 0.5

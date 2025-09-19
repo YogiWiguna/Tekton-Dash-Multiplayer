@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://ri6cmljsnefi"]
+
+[ext_resource type="Texture2D" uid="uid://b14komvy2mxw0" path="res://assets/meshes/tiles_mesh/stack_texture/stack_special_tile_tex.png" id="1_73gaa"]
+
+[resource]
+resource_name = "stack_special"
+cull_mode = 2
+albedo_texture = ExtResource("1_73gaa")
+roughness = 0.5

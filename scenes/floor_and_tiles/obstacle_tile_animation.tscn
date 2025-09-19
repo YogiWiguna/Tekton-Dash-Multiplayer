@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://b7dht18ypco37"]
+
+[ext_resource type="ArrayMesh" uid="uid://b0u70c6bmgx4t" path="res://assets/meshes/tiles_mesh/tile_mesh.obj" id="1_tbbec"]
+
+[node name="obstacle_tile_animation" type="MeshInstance3D"]
+transform = Transform3D(1.24, 0, 0, 0, 1.24, 0, 0, 0, 1.24, 0, 0, 0)
+mesh = ExtResource("1_tbbec")
