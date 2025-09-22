@@ -13,23 +13,28 @@ var current_path_index: int = 0
 var is_currently_controlled: bool = true
 
 func _physics_process(delta):
-	if current_path_index >= path.size():
-		velocity = Vector3.ZERO
-		move_and_slide()
-		return
-
-	var target_point = path[current_path_index]
-	
-	if global_transform.origin.distance_to(target_point) < 0.1:
-		current_path_index += 1
-		if current_path_index >= path.size():
+	if is_multiplayer_authority():
+		if path.is_empty():
+			velocity = Vector3.ZERO
 			return
-	
-	target_point = path[current_path_index]
-	
-	var direction = global_transform.origin.direction_to(target_point)
-	velocity = direction * move_speed
-	move_and_slide()
+		
+		if current_path_index >= path.size():
+			velocity = Vector3.ZERO
+			move_and_slide()
+			return
+
+		var target_point = path[current_path_index]
+		
+		if global_transform.origin.distance_to(target_point) < 0.1:
+			current_path_index += 1
+			if current_path_index >= path.size():
+				return
+		
+		target_point = path[current_path_index]
+		
+		var direction = global_transform.origin.direction_to(target_point)
+		velocity = direction * move_speed
+		move_and_slide()
 
 func move_to(target_position: Vector3):
 	# Only the controlling player can calculate a new path.

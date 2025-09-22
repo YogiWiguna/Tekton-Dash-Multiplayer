@@ -14,7 +14,6 @@ var players = {}
 var current_game_state = {}
 
 func _ready():
-	# Connect signals for multiplayer events.
 	multiplayer.peer_connected.connect(_on_player_connected)
 	multiplayer.peer_disconnected.connect(_on_player_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -24,9 +23,11 @@ func _ready():
 func create_server(player_name: String):
 	peer.create_server(DEFAULT_PORT)
 	multiplayer.set_multiplayer_peer(peer)
-	players[1] = {"name": player_name, "id": 1}
+	# The host is always player number 1
+	players[1] = {"name": player_name, "id": 1, "player_number": 1}
+	# We emit the signal here so the host can spawn their own character
 	emit_signal("players_changed", players)
-	print("Server created. Player %s added." % player_name)
+	print("Server created. Player '%s' added as Player 1." % player_name)
 
 func join_server(player_name: String, ip_address: String):
 	var ip = ip_address if ip_address else "127.0.0.1"
@@ -69,27 +70,45 @@ func _on_server_disconnected():
 @rpc("any_peer", "call_local")
 func _register_player(player_name: String):
 	var new_player_id = multiplayer.get_remote_sender_id()
-	players[new_player_id] = {"name": player_name, "id": new_player_id}
-	print("Registering new player: %s (%d)" % [player_name, new_player_id])
+	var new_player_number = players.size() + 1
+	players[new_player_id] = {"name": player_name, "id": new_player_id, "player_number": new_player_number}
+	print("Registering new player: '%s' (%d) as Player %d" % [player_name, new_player_id, new_player_number])
 	
+	# 1. Tell EVERYONE the player list has updated.
+	# This will trigger the host to spawn the NEW player (the one who just joined) on all screens.
 	rpc("_update_player_list", players)
-	emit_signal("players_changed", players)
 	
+	# 2. CATCH-UP LOGIC: Tell the new player about everyone who was already here.
+	var main_node = get_node("/root/Main")
+	# Loop through all players currently in the game.
+	for player_id in players:
+		# We only care about players who are NOT the one who just joined.
+		if player_id != new_player_id:
+			var p_data = players[player_id]
+			# Get the existing player's current, real-time position.
+			if main_node.spawned_players.has(player_id):
+				var existing_player_node = main_node.spawned_players[player_id]
+				var current_position = existing_player_node.global_transform.origin
+				
+				# Send a targeted command ONLY to the new client, telling them to spawn this existing player.
+				main_node.spawn_player_on_clients.rpc_id(new_player_id, p_data, current_position)
+
+	# 3. Send the game world data to the new player.
 	if not current_game_state.is_empty():
-		print("Sending existing game state to new player %d" % new_player_id)
 		rpc_id(new_player_id, "receive_game_state", current_game_state)
 
 @rpc("any_peer", "call_local")
 func _update_player_list(new_player_list):
 	players = new_player_list
+	# This signal triggers the spawn/despawn logic in main.gd for all players.
 	emit_signal("players_changed", players)
 
 # Called by the host from main.gd
 func sync_game_state(state_data: Dictionary):
 	if not multiplayer.is_server(): return
 	current_game_state = state_data
-	print("Host is caching and syncing game state to all clients.")
-	rpc("receive_game_state", state_data)
+	# Note: We don't RPC from here. We send it specifically to new players when they register.
+	print("Host is caching game state.")
 
 @rpc("any_peer", "call_local")
 func receive_game_state(state_data: Dictionary):
