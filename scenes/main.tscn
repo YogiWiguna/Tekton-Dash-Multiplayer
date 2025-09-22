@@ -5,7 +5,7 @@
 [ext_resource type="Script" uid="uid://b2j7kije6k1tr" path="res://src/main.gd" id="1_tbgi4"]
 [ext_resource type="Script" uid="uid://dwip5omhko22" path="res://src/managers/obstacles_manager.gd" id="3_tefeu"]
 [ext_resource type="Script" uid="uid://p18q5o6bidke" path="res://src/managers/floors_and_tiles_manager.gd" id="4_jyhfs"]
-[ext_resource type="PackedScene" uid="uid://dd6lekysjsxqh" path="res://scenes/Gui/gui.tscn" id="5_tbgi4"]
+[ext_resource type="PackedScene" uid="uid://dd6lekysjsxqh" path="res://scenes/gui/gui.tscn" id="5_tbgi4"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_tbgi4")
