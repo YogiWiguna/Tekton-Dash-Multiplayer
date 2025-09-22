@@ -1,6 +1,7 @@
 extends Node3D
 
 @export var current_level_id : int = 1 
+@export var player_scene: PackedScene = preload("res://scenes/player/player_0.tscn")
 
 # Variables for size of arena
 var player_number : int = 4 # Default for player number is 4
@@ -14,6 +15,8 @@ var player_actions : int = 2
 @onready var obstacles_manager = $Obstacles
 
 var current_game_state = {}
+
+var current_player_node
 
 func _ready():
 	# Connect to the signal that fires when a client receives the game state
@@ -61,6 +64,9 @@ func receive_game_state(state: Dictionary):
 	# Use the received data to build the level
 	await floors_and_tiles_manager.build_from_data(state)
 	obstacles_manager.build_from_data(state)
+	
+	# Spawn and position the player after the world is ready
+	setup_player_start_position()
 
 func setup_and_sync_level():
 	"""(HOST ONLY) Generates level data, applies it, and sends it to clients."""
@@ -99,3 +105,29 @@ func apply_level_data(data):
 		obstacles_manager.apply_obstacle_data(data.obstacles)
 	if data.has("tiles"):
 		floors_and_tiles_manager.apply_random_tile_data(data.tiles)
+
+## Player
+func setup_player_start_position():
+	# Only create a new player if one doesn't already exist
+	if not is_instance_valid(current_player_node):
+		if player_scene:
+			current_player_node = player_scene.instantiate()
+			add_child(current_player_node)
+		else:
+			print("Player scene is not set in the inspector!")
+			return
+
+	# Set the target floor ID. Arrays are 0-indexed, so floor_1 is at index 1.
+	var target_floor_id = 1
+
+	# Make sure the floors have been created and the ID is valid
+	if not floors_and_tiles_manager.floors_array.is_empty() and target_floor_id < floors_and_tiles_manager.floors_array.size():
+		# Get the target floor node from the manager
+		var target_floor = floors_and_tiles_manager.floors_array[target_floor_id]
+		var start_position = target_floor.global_transform.origin
+
+		# Set the player's position. You might want a small Y-offset to make sure it's standing on top.
+		current_player_node.global_transform.origin = start_position + Vector3(0, 0.5, 0)
+		print("Player has been positioned at the center of floor_", target_floor_id)
+	else:
+		print("Error: Could not find floor with ID: ", target_floor_id, " to position player.")

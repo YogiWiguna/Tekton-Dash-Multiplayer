@@ -23,8 +23,8 @@ func _ready():
 	#floor_static_body.connect("mouse_exited", _on_floor_exited)
 
 func _on_input_event(_camera, _event, _position, _normal, _shape_idx):
-	if Input.is_action_just_pressed("left_click") and player_board.is_put_item:
-		return
+	#if Input.is_action_just_pressed("left_click") and player_board.is_put_item:
+		#return
 	
 	# Check if the player left click on the floor with the spawn tile is true
 	# It's mean the player want to spawn tile by clicking the tiles on arena 
@@ -57,174 +57,180 @@ func _on_input_event(_camera, _event, _position, _normal, _shape_idx):
 		floors_and_tiles_regions.floor_id_clicked = floor_slot_id
 		print('floor slot id : ', floor_slot_id)
 	
-		var first_tile_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("token_tile")
-		var first_tile_mesh_surface = first_tile_mesh.get_surface_override_material(0)
-		# Burn Tile
-		if main.current_player_node.float_actions_gui.is_burn_tile and first_tile_mesh_surface != null :
-			Global.choose_tile_for_activate_power_card.emit()
-			player_board.show()
-		# Freeze
-		elif main.current_player_node.float_actions_gui.is_freeze and occupied_by_player != null:
-			Global.choose_tile_for_activate_power_card.emit()
-			player_board.show()
-		# Swap pos
-		elif main.current_player_node.float_actions_gui.is_swap_pos and occupied_by_player != null:
-			Global.choose_tile_for_activate_power_card.emit()
-			player_board.show()
-		# Move Stack
-		elif main.current_player_node.float_actions_gui.is_move_stack:
-			var _pc_move_stack = main.current_player_node.float_actions_gui.pc_move_stack
-			
-			if _pc_move_stack.is_item:
-				print("available floors for move stack : ", Global.available_floors_for_move_stack)
-				if floor_slot_id not in Global.available_floors_for_move_stack:
-					print("not in floor")
-					return
-				# Set the stack material to choosen floor and show obstacle tile
-				var choosen_obstacle_tile_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].obstacle_tile
-				choosen_obstacle_tile_mesh.set_surface_override_material(0, _pc_move_stack.obstacle_mat)
-				choosen_obstacle_tile_mesh.show()
-				
-				
-				_pc_move_stack.choose_floor_to_place_stack.emit()
-				return
-			
-			print("pc emit move stack")
-			var _obstacle_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("obstacle_tile")
-			var _obstacle_mat = _obstacle_mesh.get_surface_override_material(0)
-			print("obstacle_mat : ", _obstacle_mat)
-			if _obstacle_mat == null:
-				return
-			if _obstacle_mat.resource_name == "stack" or _obstacle_mat.resource_name == "special_stack":
-				_pc_move_stack.choose_stack_to_move.emit()
-				player_board.show()
-		
-		# Move Tile Spawn
-		elif main.current_player_node.float_actions_gui.is_move_tile_spawn:
-			var _pc_move_tile_spawn = main.current_player_node.float_actions_gui.pc_move_tile_spawn
-			
-			if _pc_move_tile_spawn.is_item:
-				print("available floors for move tile_spawn : ", Global.available_floors_for_move_tile_spawn)
-				if floor_slot_id not in Global.available_floors_for_move_tile_spawn:
-					print("not in floor")
-					return
-				# Set the tile_spawn material to choosen floor and show obstacle tile
-				var choosen_obstacle_tile_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].obstacle_tile
-				choosen_obstacle_tile_mesh.set_surface_override_material(0, _pc_move_tile_spawn.obstacle_mat)
-				choosen_obstacle_tile_mesh.show()
-				
-				
-				_pc_move_tile_spawn.choose_floor_to_place_tile_spawn.emit()
-				return
-			
-			print("pc emit move tile_spawn")
-			var _obstacle_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("obstacle_tile")
-			var _obstacle_mat = _obstacle_mesh.get_surface_override_material(0)
-			
-			if _obstacle_mat == null:
-				return
-			if _obstacle_mat.resource_name in Global.tiles_spawns_resource_name:
-				print("obstacle_mat res name : ", _obstacle_mat.resource_name)
-				_pc_move_tile_spawn.choose_tile_spawn_to_move.emit()
-				player_board.show()
-
-		# Move Block
-		elif main.current_player_node.float_actions_gui.is_move_block:
-			var _pc_move_block = main.current_player_node.float_actions_gui.pc_move_block
-			
-			if _pc_move_block.is_item:
-				print("available floors for move block : ", Global.available_floors_for_move_block)
-				if floor_slot_id not in Global.available_floors_for_move_block:
-					print("not in floor")
-					return
-				# Set the block material to choosen floor and show block tile
-				var choosen_block_mesh 
-				if _pc_move_block.floor_choose_id == _pc_move_block.obstacles_all_blocks_ids[0] or _pc_move_block.floor_choose_id == _pc_move_block.obstacles_all_blocks_ids[1]:
-					choosen_block_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].block_horizontal
-				else:
-					choosen_block_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].block_vertical
-				
-				print("block mesh : ", choosen_block_mesh.name)
-				choosen_block_mesh.set_surface_override_material(0, _pc_move_block.block_mat)
-				choosen_block_mesh.show()
-				_pc_move_block.choose_floor_to_place_block.emit()
-				return
-			
-			print("pc emit move block")
-			var _block_horizontal_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("block_horizontal")
-			var _block_horizontal_mat = _block_horizontal_mesh.get_surface_override_material(0)
-			var _block_vertical_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("block_vertical")
-			var _block_vertical_mat = _block_vertical_mesh.get_surface_override_material(0)
-			
-			
-			# Check Block Horizontal
-			if _block_horizontal_mat != null:
-				if _block_horizontal_mat.resource_name in Global.block_spawns_resource_name :
-					print("block horizontal res name : ", _block_horizontal_mat.resource_name)
-					print("emit chose block")
-					_pc_move_block.choose_block_to_move.emit()
-					player_board.show()
-			if _block_vertical_mat != null:
-				if _block_vertical_mat.resource_name in Global.block_spawns_resource_name :
-					print("block vertical res name : ", _block_vertical_mat.resource_name)
-					print("emit chose block")
-					_pc_move_block.choose_block_to_move.emit()
-					player_board.show()
-			return
-		
-		# Move Boost
-		elif main.current_player_node.float_actions_gui.is_move_boost:
-			var _pc_move_boost = main.current_player_node.float_actions_gui.pc_move_boost
-			
-			if _pc_move_boost.is_item:
-				print("available floors for move boost : ", Global.available_floors_for_move_boost)
-				if floor_slot_id not in Global.available_floors_for_move_boost:
-					print("not in floor")
-					return
-				# Set the boost material to choosen floor and show obstacle tile
-				var choosen_obstacle_tile_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].obstacle_tile
-				choosen_obstacle_tile_mesh.set_surface_override_material(0, _pc_move_boost.obstacle_mat)
-				choosen_obstacle_tile_mesh.show()
-				
-				_pc_move_boost.choose_floor_to_place_boost.emit()
-				return
-			
-			print("pc emit move boost")
-			var _obstacle_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("obstacle_tile")
-			var _obstacle_mat = _obstacle_mesh.get_surface_override_material(0)
-			
-			if _obstacle_mat == null:
-				return
-			if _obstacle_mat.resource_name in Global.boost_spawns_resource_name:
-				print("obstacle_mat res name : ", _obstacle_mat.resource_name)
-				_pc_move_boost.choose_boost_to_move.emit()
-				player_board.show()
-		
-		# Move Racer
-		elif main.current_player_node.float_actions_gui.is_move_racer and occupied_by_player != null:
-			print("move racer floor click")
-			Global.choose_tile_for_activate_power_card.emit()
-		# Put Back
-		elif main.current_player_node.float_actions_gui.is_put_back and floor_slot_id in main.current_player_node.float_actions_gui.pc_put_back.available_floors:
-			print('put back tile in choosen floor')
-			# Load texture to put in the choosen floor
-			main.current_player_node.float_actions_gui.pc_put_back.set_tile_to_choosen_floor(floor_slot_id)
-			
-			# Set camera to floor
-			main.current_camera.follow_target = marker_camera
-			main.current_camera.set_priority(10)
-			main.camera_tactic.set_priority(0)
-			await get_tree().create_timer(1.5).timeout
-			Global.put_back_to_floor.emit()
-			pass
-		# Book tile
-		elif main.current_player_node.float_actions_gui.is_book_tiles and floor_slot_id in main.current_player_node.float_actions_gui.pc_book_tiles.available_floors:
-			# Load the 3D texture on the tile.tscn
-			await main.current_player_node.float_actions_gui.pc_book_tiles.set_book_tiles(floor_slot_id)
-			floors_and_tiles_regions.floor_id_clicked = null
-			await get_tree().create_timer(0.5).timeout
-			Global.book_tiles_done.emit()
+		#var first_tile_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("token_tile")
+		#var first_tile_mesh_surface = first_tile_mesh.get_surface_override_material(0)
+		## Burn Tile
+		#if main.current_player_node.float_actions_gui.is_burn_tile and first_tile_mesh_surface != null :
+			#Global.choose_tile_for_activate_power_card.emit()
+			#player_board.show()
+		## Freeze
+		#elif main.current_player_node.float_actions_gui.is_freeze and occupied_by_player != null:
+			#Global.choose_tile_for_activate_power_card.emit()
+			#player_board.show()
+		## Swap pos
+		#elif main.current_player_node.float_actions_gui.is_swap_pos and occupied_by_player != null:
+			#Global.choose_tile_for_activate_power_card.emit()
+			#player_board.show()
+		## Move Stack
+		#elif main.current_player_node.float_actions_gui.is_move_stack:
+			#var _pc_move_stack = main.current_player_node.float_actions_gui.pc_move_stack
+			#
+			#if _pc_move_stack.is_item:
+				#print("available floors for move stack : ", Global.available_floors_for_move_stack)
+				#if floor_slot_id not in Global.available_floors_for_move_stack:
+					#print("not in floor")
+					#return
+				## Set the stack material to choosen floor and show obstacle tile
+				#var choosen_obstacle_tile_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].obstacle_tile
+				#choosen_obstacle_tile_mesh.set_surface_override_material(0, _pc_move_stack.obstacle_mat)
+				#choosen_obstacle_tile_mesh.show()
+				#
+				#
+				#_pc_move_stack.choose_floor_to_place_stack.emit()
+				#return
+			#
+			#print("pc emit move stack")
+			#var _obstacle_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("obstacle_tile")
+			#var _obstacle_mat = _obstacle_mesh.get_surface_override_material(0)
+			#print("obstacle_mat : ", _obstacle_mat)
+			#if _obstacle_mat == null:
+				#return
+			#if _obstacle_mat.resource_name == "stack" or _obstacle_mat.resource_name == "special_stack":
+				#_pc_move_stack.choose_stack_to_move.emit()
+				#player_board.show()
+		#
+		## Move Tile Spawn
+		#elif main.current_player_node.float_actions_gui.is_move_tile_spawn:
+			#var _pc_move_tile_spawn = main.current_player_node.float_actions_gui.pc_move_tile_spawn
+			#
+			#if _pc_move_tile_spawn.is_item:
+				#print("available floors for move tile_spawn : ", Global.available_floors_for_move_tile_spawn)
+				#if floor_slot_id not in Global.available_floors_for_move_tile_spawn:
+					#print("not in floor")
+					#return
+				## Set the tile_spawn material to choosen floor and show obstacle tile
+				#var choosen_obstacle_tile_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].obstacle_tile
+				#choosen_obstacle_tile_mesh.set_surface_override_material(0, _pc_move_tile_spawn.obstacle_mat)
+				#choosen_obstacle_tile_mesh.show()
+				#
+				#
+				#_pc_move_tile_spawn.choose_floor_to_place_tile_spawn.emit()
+				#return
+			#
+			#print("pc emit move tile_spawn")
+			#var _obstacle_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("obstacle_tile")
+			#var _obstacle_mat = _obstacle_mesh.get_surface_override_material(0)
+			#
+			#if _obstacle_mat == null:
+				#return
+			#if _obstacle_mat.resource_name in Global.tiles_spawns_resource_name:
+				#print("obstacle_mat res name : ", _obstacle_mat.resource_name)
+				#_pc_move_tile_spawn.choose_tile_spawn_to_move.emit()
+				#player_board.show()
+#
+		## Move Block
+		#elif main.current_player_node.float_actions_gui.is_move_block:
+			#var _pc_move_block = main.current_player_node.float_actions_gui.pc_move_block
+			#
+			#if _pc_move_block.is_item:
+				#print("available floors for move block : ", Global.available_floors_for_move_block)
+				#if floor_slot_id not in Global.available_floors_for_move_block:
+					#print("not in floor")
+					#return
+				## Set the block material to choosen floor and show block tile
+				#var choosen_block_mesh 
+				#if _pc_move_block.floor_choose_id == _pc_move_block.obstacles_all_blocks_ids[0] or _pc_move_block.floor_choose_id == _pc_move_block.obstacles_all_blocks_ids[1]:
+					#choosen_block_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].block_horizontal
+				#else:
+					#choosen_block_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].block_vertical
+				#
+				#print("block mesh : ", choosen_block_mesh.name)
+				#choosen_block_mesh.set_surface_override_material(0, _pc_move_block.block_mat)
+				#choosen_block_mesh.show()
+				#_pc_move_block.choose_floor_to_place_block.emit()
+				#return
+			#
+			#print("pc emit move block")
+			#var _block_horizontal_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("block_horizontal")
+			#var _block_horizontal_mat = _block_horizontal_mesh.get_surface_override_material(0)
+			#var _block_vertical_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("block_vertical")
+			#var _block_vertical_mat = _block_vertical_mesh.get_surface_override_material(0)
+			#
+			#
+			## Check Block Horizontal
+			#if _block_horizontal_mat != null:
+				#if _block_horizontal_mat.resource_name in Global.block_spawns_resource_name :
+					#print("block horizontal res name : ", _block_horizontal_mat.resource_name)
+					#print("emit chose block")
+					#_pc_move_block.choose_block_to_move.emit()
+					#player_board.show()
+			#if _block_vertical_mat != null:
+				#if _block_vertical_mat.resource_name in Global.block_spawns_resource_name :
+					#print("block vertical res name : ", _block_vertical_mat.resource_name)
+					#print("emit chose block")
+					#_pc_move_block.choose_block_to_move.emit()
+					#player_board.show()
+			#return
+		#
+		## Move Boost
+		#elif main.current_player_node.float_actions_gui.is_move_boost:
+			#var _pc_move_boost = main.current_player_node.float_actions_gui.pc_move_boost
+			#
+			#if _pc_move_boost.is_item:
+				#print("available floors for move boost : ", Global.available_floors_for_move_boost)
+				#if floor_slot_id not in Global.available_floors_for_move_boost:
+					#print("not in floor")
+					#return
+				## Set the boost material to choosen floor and show obstacle tile
+				#var choosen_obstacle_tile_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].obstacle_tile
+				#choosen_obstacle_tile_mesh.set_surface_override_material(0, _pc_move_boost.obstacle_mat)
+				#choosen_obstacle_tile_mesh.show()
+				#
+				#_pc_move_boost.choose_floor_to_place_boost.emit()
+				#return
+			#
+			#print("pc emit move boost")
+			#var _obstacle_mesh = floors_and_tiles_regions.tiles_array[floor_slot_id].get_node("obstacle_tile")
+			#var _obstacle_mat = _obstacle_mesh.get_surface_override_material(0)
+			#
+			#if _obstacle_mat == null:
+				#return
+			#if _obstacle_mat.resource_name in Global.boost_spawns_resource_name:
+				#print("obstacle_mat res name : ", _obstacle_mat.resource_name)
+				#_pc_move_boost.choose_boost_to_move.emit()
+				#player_board.show()
+		#
+		## Move Racer
+		#elif main.current_player_node.float_actions_gui.is_move_racer and occupied_by_player != null:
+			#print("move racer floor click")
+			#Global.choose_tile_for_activate_power_card.emit()
+		## Put Back
+		#elif main.current_player_node.float_actions_gui.is_put_back and floor_slot_id in main.current_player_node.float_actions_gui.pc_put_back.available_floors:
+			#print('put back tile in choosen floor')
+			## Load texture to put in the choosen floor
+			#main.current_player_node.float_actions_gui.pc_put_back.set_tile_to_choosen_floor(floor_slot_id)
+			#
+			## Set camera to floor
+			#main.current_camera.follow_target = marker_camera
+			#main.current_camera.set_priority(10)
+			#main.camera_tactic.set_priority(0)
+			#await get_tree().create_timer(1.5).timeout
+			#Global.put_back_to_floor.emit()
+			#pass
+		## Book tile
+		#elif main.current_player_node.float_actions_gui.is_book_tiles and floor_slot_id in main.current_player_node.float_actions_gui.pc_book_tiles.available_floors:
+			## Load the 3D texture on the tile.tscn
+			#await main.current_player_node.float_actions_gui.pc_book_tiles.set_book_tiles(floor_slot_id)
+			#floors_and_tiles_regions.floor_id_clicked = null
+			#await get_tree().create_timer(0.5).timeout
+			#Global.book_tiles_done.emit()
+		#else:
+		if main.current_player_node.is_currently_controlled and not Global.is_power_card_active:
+			print("Requesting player to move to floor: ", floor_slot_id)
+			# Call the new move_to function on the current player character
+			main.current_player_node.move_to(self.global_transform.origin)
 		else:
+			# If it's not a valid move, do nothing.
 			return
 
 
