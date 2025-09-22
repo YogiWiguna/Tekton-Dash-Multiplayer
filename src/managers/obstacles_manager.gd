@@ -1,10 +1,10 @@
 extends Node3D
 class_name Obstacles
 
-@onready var map = $".."
+@onready var main = $".."
 @onready var characters_regions = $"../CharactersManager"
 @onready var floors_and_tiles_regions = $"../FloorsAndTileManager"
-@onready var camera_3d = $"../camera_3d"
+@onready var camera_3d = $"../Camera3D"
 
 # Tiles Spawn Material
 var coin_tile_spawn_surface_mat = load("res://assets/materials/obstacles/tiles_spawn/coin_tile_spawn_surface_mat.tres")
@@ -110,18 +110,90 @@ var max_id_for_spawn_obstacles: int = 35
 
 
 func _ready():
-	await Global.player_number_ready
-	
-	set_obstacle_tile_texture()
-	
-	set_min_max_ids_for_obstacles_spawn()
-	#print("stack id array : ", stacks_id_array)
-	#print("tile spawn specials : ", tiles_spawn_special_id_array)
+	# Obstacle generation is now handled by the host via main.gd
+	pass
 
+# Called on all clients (and host) to apply the received obstacle data
+func apply_obstacle_data(data: Dictionary):
+	set_obstacle_tile_texture() # Ensure textures are correct first
+
+	# Clear existing arrays to prevent duplicates
+	tiles_spawn_id_array.clear()
+	tiles_spawn_special_id_array.clear()
+	stacks_id_array.clear()
+	stacks_special_id_array.clear()
+	boosts_id_array.clear()
+	boosts_special_id_array.clear()
+	blocks_id_array.clear()
+	blocks_special_id_array.clear()
+
+	# Populate arrays from synced data
+	tiles_spawn_id_array = data.get("tiles_spawn", [])
+	tiles_spawn_special_id_array = data.get("tiles_spawn_special", [])
+	stacks_id_array = data.get("stacks", [])
+	stacks_special_id_array = data.get("stacks_special", [])
+	boosts_id_array = data.get("boosts", [])
+	boosts_special_id_array = data.get("boosts_special", [])
+	blocks_id_array = data.get("blocks", [])
+	blocks_special_id_array = data.get("blocks_special", [])
+
+	# Apply materials based on the new data
+	set_tiles_spawn_material_into_obstacle_tile()
+	set_tiles_spawn_special_material_into_obstacle_tile()
+	set_stack_material_into_obstacle_tile()
+	set_stack_special_material_into_obstacle_tile()
+	set_boost_material_into_obstacle_tile()
+	set_boost_special_material_into_obstacle_tile()
+	set_block_material_into_block_obstacle()
+	set_block_special_material_into_block_obstacle()
+
+# HOST ONLY
+func generate_obstacle_data() -> Dictionary:
+	set_obstacle_tile_texture()
+	set_min_max_ids_for_obstacles_spawn()
+	
+	return {
+		"tiles_spawn": tiles_spawn_id_array,
+		"tiles_spawn_special": tiles_spawn_special_id_array,
+		"stacks": stacks_id_array,
+		"stacks_special": stacks_special_id_array,
+		"boosts": boosts_id_array,
+		"boosts_special": boosts_special_id_array,
+		"blocks": blocks_id_array,
+		"blocks_special": blocks_special_id_array
+	}
+
+# CLIENT & HOST
+func build_from_data(state: Dictionary):
+	var obstacle_data = state.get("obstacles", {})
+	if obstacle_data.is_empty():
+		print("Obstacle data is empty.")
+		return
+	
+	# Set variables from data
+	tiles_spawn_id_array = obstacle_data.get("tiles_spawn", [])
+	tiles_spawn_special_id_array = obstacle_data.get("tiles_spawn_special", [])
+	stacks_id_array = obstacle_data.get("stacks", [])
+	stacks_special_id_array = obstacle_data.get("stacks_special", [])
+	boosts_id_array = obstacle_data.get("boosts", [])
+	boosts_special_id_array = obstacle_data.get("boosts_special", [])
+	blocks_id_array = obstacle_data.get("blocks", [])
+	blocks_special_id_array = obstacle_data.get("blocks_special", [])
+	
+	# Now that IDs are set, apply materials
+	set_obstacle_tile_texture() # Set textures first
+	set_tiles_spawn_material_into_obstacle_tile()
+	set_tiles_spawn_special_material_into_obstacle_tile()
+	set_stack_material_into_obstacle_tile()
+	set_stack_special_material_into_obstacle_tile()
+	set_boost_material_into_obstacle_tile()
+	set_boost_special_material_into_obstacle_tile()
+	set_block_material_into_block_obstacle()
+	set_block_special_material_into_block_obstacle()
 
 # Set texture obstacle based on the level arena
 func set_obstacle_tile_texture():
-	var current_level_id = map.current_level_id
+	var current_level_id = main.current_level_id
 	
 	if current_level_id == 0: # Level Bridge
 		stack_surface_mat.albedo_texture = stack_bridge_texture
@@ -180,128 +252,65 @@ func set_obstacle_tile_texture():
 # ===        Spawn The Obstacles       ===
 # ========================================
 func set_min_max_ids_for_obstacles_spawn():
-	match map.player_number:
+	match main.player_number:
 		3:
 			min_id_for_spawn_obstacles = 9
 			max_id_for_spawn_obstacles = 26
 			
 			set_generate_ids_for_obstacles(0)
-			## Set Surface Tile Spawn
-			set_tiles_spawn_material_into_obstacle_tile()
-			## Set Surface Stacks
-			set_stack_material_into_obstacle_tile()
-			## Set Surface Boosts
-			set_boost_material_into_obstacle_tile()
-			## Set Surface Blocks
-			set_block_material_into_block_obstacle()
+			
 		4:
 			min_id_for_spawn_obstacles = 12
 			max_id_for_spawn_obstacles = 35
 			
 			set_generate_ids_for_obstacles(0)
-			#boosts_id_array = [-1,-1,-1,-1]
-			#blocks_id_array = [14,22,19,35]
 			
-			#boosts_id_array = [7,15,21,34]
-			#blocks_id_array = [14,22,19,35]
-			
-			#boosts_id_array = [14,19,16,24]
-			#blocks_id_array = [13,15,19,21]
-			
-			#stacks_id_array = [8,11]
-			#tiles_spawn_id_array =  [9,10,12,15]
-			## Set Surface Tile Spawn
-			set_tiles_spawn_material_into_obstacle_tile()
-			## Set Surface Stacks
-			set_stack_material_into_obstacle_tile()
-			## Set Surface Boosts
-			set_boost_material_into_obstacle_tile()
-			## Set Surface Blocks
-			set_block_material_into_block_obstacle()
 		5:
 			min_id_for_spawn_obstacles = 15
 			max_id_for_spawn_obstacles = 44
 			
 			set_generate_ids_for_obstacles(1)
-			# Set Surface Tile Spawn
-			set_tiles_spawn_material_into_obstacle_tile()
-			set_tiles_spawn_special_material_into_obstacle_tile()
-			#
-			# Set Surface Stacks
-			set_stack_material_into_obstacle_tile()
-			set_stack_special_material_into_obstacle_tile()
-			#
-			# Set Surface Boosts
-			set_boost_material_into_obstacle_tile()
-			set_boost_special_material_into_obstacle_tile()
-			#
-			# Set Surface Blocks
-			set_block_material_into_block_obstacle()
-			set_block_special_material_into_block_obstacle()
+			
 		6:
 			min_id_for_spawn_obstacles = 18
 			max_id_for_spawn_obstacles = 53
 			
 			set_generate_ids_for_obstacles(2)
-			# Set Surface Tile Spawn
-			set_tiles_spawn_material_into_obstacle_tile()
-			set_tiles_spawn_special_material_into_obstacle_tile()
-			#
-			# Set Surface Stacks
-			set_stack_material_into_obstacle_tile()
-			set_stack_special_material_into_obstacle_tile()
-			#
-			# Set Surface Boosts
-			set_boost_material_into_obstacle_tile()
-			set_boost_special_material_into_obstacle_tile()
-			#
-			# Set Surface Blocks
-			set_block_material_into_block_obstacle()
-			set_block_special_material_into_block_obstacle()
-
+			
 func set_generate_ids_for_obstacles(_special_id_count):
 	## Tiles Spawn
 	var combine_obstacle_id
 
 	
 	tiles_spawn_id_array = generate_random_ids(min_id_for_spawn_obstacles, max_id_for_spawn_obstacles, 4,)
-	#print("tiles spawn before : ", tiles_spawn_id_array)
 	tiles_spawn_special_id_array = generate_random_ids(min_id_for_spawn_obstacles, max_id_for_spawn_obstacles, _special_id_count, tiles_spawn_id_array)
 	combine_obstacle_id = tiles_spawn_id_array + tiles_spawn_special_id_array
-	#print("tiles spawn specials : ", tiles_spawn_special_id_array)
-	#print("combine obstacle ids : ", combine_obstacle_id)
+	
 	## Stack 
 	stacks_id_array = generate_random_ids(min_id_for_spawn_obstacles, max_id_for_spawn_obstacles, 4, combine_obstacle_id)
 	combine_obstacle_id += stacks_id_array
 	stacks_special_id_array = generate_random_ids(min_id_for_spawn_obstacles, max_id_for_spawn_obstacles, _special_id_count, combine_obstacle_id)
-	#print("Stacks IDs: ", stacks_id_array)
-	#print("stack specials id : ", stacks_special_id_array)
-	#print("combine obstacle ids : ", combine_obstacle_id)
+	
 	## Boosts 
 	combine_obstacle_id += stacks_special_id_array
 	boosts_id_array = generate_random_ids(min_id_for_spawn_obstacles, max_id_for_spawn_obstacles, 4, combine_obstacle_id, "boost")
 	combine_obstacle_id += boosts_id_array
 	boosts_special_id_array = generate_random_ids(min_id_for_spawn_obstacles, max_id_for_spawn_obstacles, _special_id_count, combine_obstacle_id, "boost_special")
-	#print("boost IDs: ", boosts_id_array)
-	#print("boost specials id : ", boosts_special_id_array)
-	#print("combine obstacle ids : ", combine_obstacle_id)
+	
 	## Block
 	blocks_id_array = generate_random_ids(min_id_for_spawn_obstacles, max_id_for_spawn_obstacles, 4, [], "block")
 	blocks_special_id_array = generate_random_ids(min_id_for_spawn_obstacles, max_id_for_spawn_obstacles, _special_id_count, [], "block_special")
-	#print("blocks id array : ",blocks_id_array)
-	#print("blocks special id array : ", blocks_special_id_array)
-	#print("combine obstacle ids : ", combine_obstacle_id)
-
+	
 
 # ========================================
 # ===      Generate Ids Obstacles      ===
 # ========================================
 func get_adjacents(id: int) -> Array:
 	return [
-		id - map.player_number,  # top
+		id - main.player_number,  # top
 		id - 1,                  # left
 		id + 1,                  # right
-		id + map.player_number   # bottom
+		id + main.player_number   # bottom
 	]
 
 func is_adjacent_to_existing(id: int, existing_array: Array) -> bool:
@@ -316,25 +325,25 @@ func is_valid_horizontal_block(id: int, existing_horizontal_1: int, existing_hor
 	if block_string in ["block_horizontal_2", "block_horizontal_special"]:
 		invalid_positions.append_array([
 			existing_horizontal_1,
-			existing_horizontal_1 - map.player_number,
-			existing_horizontal_1 + map.player_number
+			existing_horizontal_1 - main.player_number,
+			existing_horizontal_1 + main.player_number
 		])
 		invalid_positions.append_array(range(existing_horizontal_1 - 3, existing_horizontal_1 + 4))
 	
 	if block_string == "block_horizontal_special":
 		invalid_positions.append_array([
 			existing_horizontal_2,
-			existing_horizontal_2 - map.player_number,
-			existing_horizontal_2 + map.player_number
+			existing_horizontal_2 - main.player_number,
+			existing_horizontal_2 + main.player_number
 		])
 		invalid_positions.append_array(range(existing_horizontal_2 - 3, existing_horizontal_2 + 4))
 		
 		for vertical in [existing_vertical_1, existing_vertical_2]:
 			invalid_positions.append_array([
 				vertical,
-				vertical + map.player_number,
+				vertical + main.player_number,
 				vertical - 1,
-				vertical + (map.player_number - 1)
+				vertical + (main.player_number - 1)
 			])
 	
 	# Position 
@@ -350,8 +359,8 @@ func is_valid_vertical_block(id: int, existing_horizontal_1: int, existing_horiz
 	for horizontal in [existing_horizontal_1, existing_horizontal_2]:
 		invalid_positions.append_array([
 			horizontal,
-			horizontal - (map.player_number - 1),
-			horizontal - map.player_number,
+			horizontal - (main.player_number - 1),
+			horizontal - main.player_number,
 			horizontal + 1
 		])
 	
@@ -359,8 +368,8 @@ func is_valid_vertical_block(id: int, existing_horizontal_1: int, existing_horiz
 		for vertical in [existing_vertical_1, existing_vertical_2]:
 			invalid_positions.append_array([
 				vertical, 
-				vertical + map.player_number,
-				vertical - map.player_number,
+				vertical + main.player_number,
+				vertical - main.player_number,
 				vertical - 1,
 				vertical + 1
 			])
@@ -368,8 +377,8 @@ func is_valid_vertical_block(id: int, existing_horizontal_1: int, existing_horiz
 	if vertical_string == "block_vertical_special":
 		invalid_positions.append_array([
 			existing_horizontal_special,
-			existing_horizontal_special - (map.player_number - 1),
-			existing_horizontal_special - map.player_number,
+			existing_horizontal_special - (main.player_number - 1),
+			existing_horizontal_special - main.player_number,
 			existing_horizontal_special + 1
 		])
 	
@@ -378,7 +387,6 @@ func is_valid_vertical_block(id: int, existing_horizontal_1: int, existing_horiz
 	invalid_floors = [32,33,34,35]
 	invalid_positions += invalid_floors
 	
-	#print("invalid_positions : ", id in invalid_positions)
 	return not (id in invalid_positions)
 
 # Generate ids and check it if there's execption array for generate the new id
@@ -386,10 +394,10 @@ func generate_random_ids(min_id: int, max_id: int, count: int, exclude_ids: Arra
 	var available_ids: Array = range(min_id, max_id + 1)
 	# Checking level
 	var _occupied_ids = []
-	if map.player_number == 4:
-		if map.current_level_id == 0:
+	if main.player_number == 4:
+		if main.current_level_id == 0:
 			_occupied_ids = [9,20,31]
-		elif map.current_level_id == 4:
+		elif main.current_level_id == 4:
 			_occupied_ids = [11,35]
 	exclude_ids += _occupied_ids
 	
@@ -432,7 +440,6 @@ func generate_random_ids(min_id: int, max_id: int, count: int, exclude_ids: Arra
 							if not is_valid_vertical_block(id, blocks_id_array[0], blocks_id_array[1], blocks_id_array[2], blocks_id_array[3], new_array[0], "block_vertical_special"):
 								is_valid = false
 			if is_valid:
-				#print("valid id append : ", id)
 				valid_ids.append(id)
 		
 		if valid_ids.is_empty():
@@ -448,13 +455,11 @@ func generate_random_ids(min_id: int, max_id: int, count: int, exclude_ids: Arra
 		new_array.append(random_id)
 		available_ids.erase(random_id)
 		
-		#print("%s blocks: %s" % [["First horizontal", "Second horizontal", "First vertical", "Second vertical"][i], valid_ids])
-	
 	return new_array
 
 func excludes_vertical_ids(valid_array):
 	var excludes_array 
-	match map.player_number:
+	match main.player_number:
 		3:
 			excludes_array = [3,6,9,12,15,18,21,24]
 		4:
@@ -485,7 +490,6 @@ func set_tiles_spawn_material_into_obstacle_tile():
 		var selected_tiles_id = tiles_spawn_id_array[index]
 		var obstacle_tile_mesh = floors_and_tiles_regions.tiles_array[selected_tiles_id].get_node("obstacle_tile")
 		
-		# Assign the material based on the index
 		if index < materials.size():
 			obstacle_tile_mesh.set_surface_override_material(0, materials[index])
 		
@@ -501,7 +505,6 @@ func set_tiles_spawn_special_material_into_obstacle_tile():
 		var selected_tiles_id = tiles_spawn_special_id_array[index]
 		var obstacle_tile_mesh = floors_and_tiles_regions.tiles_array[selected_tiles_id].get_node("obstacle_tile")
 		
-		# Assign the material based on the index
 		if index < materials.size():
 			obstacle_tile_mesh.set_surface_override_material(0, materials[index])
 		
@@ -538,7 +541,6 @@ func set_boost_material_into_obstacle_tile():
 		var selected_tiles_id = boosts_id_array[index]
 		var obstacle_tile_mesh = floors_and_tiles_regions.tiles_array[selected_tiles_id].get_node("obstacle_tile")
 		
-		# Assign the material based on the index
 		if index < materials.size():
 			obstacle_tile_mesh.set_surface_override_material(0, materials[index])
 		
@@ -554,7 +556,6 @@ func set_boost_special_material_into_obstacle_tile():
 		var selected_tiles_id = boosts_special_id_array[index]
 		var obstacle_tile_mesh = floors_and_tiles_regions.tiles_array[selected_tiles_id].get_node("obstacle_tile")
 		
-		# Assign the material based on the index
 		if index < materials.size():
 			obstacle_tile_mesh.set_surface_override_material(0, materials[index])
 		
@@ -577,7 +578,6 @@ func set_block_material_into_block_obstacle():
 		var block_horizontal = floors_and_tiles_regions.tiles_array[selected_tiles_id].get_node("block_horizontal")
 		var block_vertical = floors_and_tiles_regions.tiles_array[selected_tiles_id].get_node("block_vertical")
 		
-		# Assign the material based on the index
 		if index < materials.size() - 2:
 			block_horizontal.set_surface_override_material(0, materials[index])
 			block_horizontal.show()
@@ -596,7 +596,6 @@ func set_block_special_material_into_block_obstacle():
 		var block_horizontal = floors_and_tiles_regions.tiles_array[selected_tiles_id].get_node("block_horizontal")
 		var block_vertical = floors_and_tiles_regions.tiles_array[selected_tiles_id].get_node("block_vertical")
 		
-		# Assign the material based on the index
 		if index < materials.size() - 1:
 			block_horizontal.set_surface_override_material(0, materials[index])
 			block_horizontal.show()

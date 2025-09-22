@@ -1,9 +1,11 @@
-[gd_scene load_steps=5 format=3 uid="uid://djsu6kddrf6gg"]
+[gd_scene load_steps=7 format=3 uid="uid://djsu6kddrf6gg"]
 
 [ext_resource type="Script" uid="uid://dcsnkcxfhjtda" path="res://src/astar_grid_map/astar_map.gd" id="1_jyhfs"]
 [ext_resource type="PackedScene" uid="uid://o0e2fvowo4vp" path="res://scenes/astar_grid_map/astar_grid_map.tscn" id="1_sugp2"]
 [ext_resource type="Script" uid="uid://b2j7kije6k1tr" path="res://src/main.gd" id="1_tbgi4"]
-[ext_resource type="Script" uid="uid://p18q5o6bidke" path="res://src/managers/floors_and_tiles_regions.gd" id="4_jyhfs"]
+[ext_resource type="Script" uid="uid://dwip5omhko22" path="res://src/managers/obstacles_manager.gd" id="3_tefeu"]
+[ext_resource type="Script" uid="uid://p18q5o6bidke" path="res://src/managers/floors_and_tiles_manager.gd" id="4_jyhfs"]
+[ext_resource type="PackedScene" uid="uid://dd6lekysjsxqh" path="res://scenes/Gui/gui.tscn" id="5_tbgi4"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_tbgi4")
@@ -13,6 +15,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0.5)
 script = ExtResource("4_jyhfs")
 
 [node name="Obstacles" type="Node3D" parent="."]
+script = ExtResource("3_tefeu")
 
 [node name="AstarMap" type="Node3D" parent="."]
 script = ExtResource("1_jyhfs")
@@ -26,8 +29,4 @@ transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 4.81
 
 [node name="DiceManager" type="Node3D" parent="."]
 
-[node name="Gui" type="Control" parent="."]
-layout_mode = 3
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="Gui" parent="." instance=ExtResource("5_tbgi4")]

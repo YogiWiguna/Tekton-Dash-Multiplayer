@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://dd6lekysjsxqh"]
+
+[node name="Gui" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="PlayerBoard" type="Control" parent="."]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Node3D" type="Node3D" parent="."]
