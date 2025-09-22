@@ -19,6 +19,7 @@ config/icon="uid://dxtnfhgnfcj7u"
 
 Global="*res://src/global.gd"
 NetworkManager="*res://src/managers/network_manager.gd"
+PlayerData="*res://src/player/player_data.gd"
 
 [input]
 

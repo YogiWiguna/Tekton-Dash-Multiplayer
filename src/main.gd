@@ -15,32 +15,33 @@ var player_actions : int = 2
 @onready var obstacles_manager = $Obstacles
 
 var current_game_state = {}
+var spawned_players = {}
 
 var current_player_node
 
+var start_positions = {
+	1: 1,  # Player 1 (Host) starts on floor_1
+	2: 2,  # Player 2 starts on floor_2
+	3: 0,  # Player 3 starts on floor_0
+	4: 3   # Player 4 starts on floor_3
+}
+
 func _ready():
-	# Connect to the signal that fires when a client receives the game state
 	network_manager.game_state_received.connect(receive_game_state)
+	# Connect to the signal that tells us when players join or leave
+	network_manager.players_changed.connect(update_player_spawns)
 	
-	# The HOST is the authority and generates the game world
 	if multiplayer.is_server():
-		# Wait a frame to ensure all nodes are ready before generating the level
 		await get_tree().process_frame
 		
-		# First, generate the initial state data dictionary
 		var initial_state = {
 			"player_number": player_number,
 			"default_rows": default_rows,
-			# The managers will generate their respective data without building nodes yet
 			"tiles": floors_and_tiles_manager.generate_random_tile_data(),
 			"obstacles": obstacles_manager.generate_obstacle_data()
 		}
 		
-		# Now, the HOST builds its own world using this authoritative state.
-		# This ensures the host builds the level only ONCE.
 		receive_game_state(initial_state)
-		
-		# Finally, the HOST sends this state to all current and future clients.
 		network_manager.sync_game_state(initial_state)
 
 
@@ -57,16 +58,14 @@ func receive_game_state(state: Dictionary):
 		print("Received empty game state, skipping build.")
 		return
 		
-	# Set variables from the host
 	player_number = state.get("player_number", 4)
 	default_rows = state.get("default_rows", 10)
 	
-	# Use the received data to build the level
 	await floors_and_tiles_manager.build_from_data(state)
 	obstacles_manager.build_from_data(state)
 	
-	# Spawn and position the player after the world is ready
-	setup_player_start_position()
+	# After building the world, we need to spawn players based on the current list
+	update_player_spawns(spawned_players)
 
 func setup_and_sync_level():
 	"""(HOST ONLY) Generates level data, applies it, and sends it to clients."""
@@ -107,27 +106,47 @@ func apply_level_data(data):
 		floors_and_tiles_manager.apply_random_tile_data(data.tiles)
 
 ## Player
-func setup_player_start_position():
-	# Only create a new player if one doesn't already exist
-	if not is_instance_valid(current_player_node):
-		if player_scene:
-			current_player_node = player_scene.instantiate()
-			add_child(current_player_node)
-		else:
-			print("Player scene is not set in the inspector!")
-			return
+# This function should completely replace your old 'update_player_spawns' function.
+func update_player_spawns(players_data: Dictionary):
+	# 1. Remove players who have disconnected
+	var current_spawned_ids = spawned_players.keys()
+	for player_id in current_spawned_ids:
+		if not players_data.has(player_id):
+			print("Player %d is no longer in the list. Removing." % player_id)
+			var player_node_to_remove = spawned_players[player_id]
 
-	# Set the target floor ID. Arrays are 0-indexed, so floor_1 is at index 1.
-	var target_floor_id = 1
+			if player_node_to_remove == current_player_node:
+				current_player_node = null
 
-	# Make sure the floors have been created and the ID is valid
-	if not floors_and_tiles_manager.floors_array.is_empty() and target_floor_id < floors_and_tiles_manager.floors_array.size():
-		# Get the target floor node from the manager
-		var target_floor = floors_and_tiles_manager.floors_array[target_floor_id]
-		var start_position = target_floor.global_transform.origin
+			if is_instance_valid(player_node_to_remove):
+				player_node_to_remove.queue_free()
+			spawned_players.erase(player_id)
 
-		# Set the player's position. You might want a small Y-offset to make sure it's standing on top.
-		current_player_node.global_transform.origin = start_position + Vector3(0, 0.5, 0)
-		print("Player has been positioned at the center of floor_", target_floor_id)
-	else:
-		print("Error: Could not find floor with ID: ", target_floor_id, " to position player.")
+	# 2. Spawn players who are new
+	for player_id in players_data:
+		if not spawned_players.has(player_id):
+			print("Player %d is new. Spawning." % player_id)
+			var p_data = players_data[player_id]
+			
+			var player_instance = player_scene.instantiate()
+			player_instance.name = str(player_id)
+			
+			add_child(player_instance)
+			
+			player_instance.set_display_name(p_data.name)
+			
+			spawned_players[player_id] = player_instance
+
+			player_instance.set_multiplayer_authority(player_id)
+
+			if player_id == multiplayer.get_unique_id():
+				current_player_node = player_instance
+			
+			var target_floor_id = start_positions.get(player_id, player_id)
+
+			if target_floor_id < floors_and_tiles_manager.floors_array.size():
+				var target_floor = floors_and_tiles_manager.floors_array[target_floor_id]
+				var start_pos = target_floor.global_transform.origin + Vector3(0, 0.5, 0)
+				player_instance.global_transform.origin = start_pos
+			else:
+				print("Error: Invalid floor ID %d for player %d" % [target_floor_id, player_id])

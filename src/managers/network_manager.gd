@@ -51,9 +51,7 @@ func _on_player_disconnected(id: int):
 
 func _on_connected_to_server():
 	print("Successfully connected to the server.")
-	# This path is tricky for getting the username. A global singleton for player data is better.
-	var local_player_name = get_tree().get_root().find_child("Network", true, false).get_node("NetworkContainer/UsernameInput").text
-	rpc_id(1, "_register_player", local_player_name)
+	rpc_id(1, "_register_player", PlayerData.player_name)
 	emit_signal("connection_result", true)
 
 func _on_connection_failed():
@@ -74,15 +72,9 @@ func _register_player(player_name: String):
 	players[new_player_id] = {"name": player_name, "id": new_player_id}
 	print("Registering new player: %s (%d)" % [player_name, new_player_id])
 	
-	# Send the updated player list to everyone
 	rpc("_update_player_list", players)
-	
-	# Also update the host's local player list UI
 	emit_signal("players_changed", players)
 	
-	# CRITICAL FIX for late-joiners:
-	# If the game world has been generated, send the full game state
-	# directly to the newly connected player.
 	if not current_game_state.is_empty():
 		print("Sending existing game state to new player %d" % new_player_id)
 		rpc_id(new_player_id, "receive_game_state", current_game_state)
@@ -95,7 +87,6 @@ func _update_player_list(new_player_list):
 # Called by the host from main.gd
 func sync_game_state(state_data: Dictionary):
 	if not multiplayer.is_server(): return
-	# Cache the state so we can send it to players who join later.
 	current_game_state = state_data
 	print("Host is caching and syncing game state to all clients.")
 	rpc("receive_game_state", state_data)
