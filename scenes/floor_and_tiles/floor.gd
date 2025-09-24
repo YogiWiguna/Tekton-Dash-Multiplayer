@@ -225,10 +225,15 @@ func _on_input_event(_camera, _event, _position, _normal, _shape_idx):
 			#await get_tree().create_timer(0.5).timeout
 			#Global.book_tiles_done.emit()
 		#else:
-		if main.current_player_node.is_currently_controlled and not Global.is_power_card_active:
-			print("Requesting player to move to floor: ", floor_slot_id)
-			# Call the new move_to function on the current player character
-			main.current_player_node.move_to(self.global_transform.origin)
+		if not Global.is_power_card_active:
+			if floor_slot_id in characters_manager.adjacents_array:
+				print("Requesting player to move to floor: ", floor_slot_id)
+				# Call the new move_to function on the current player character
+				main.current_player_node.move_to(self.global_transform.origin, floor_slot_id)
+			else:
+				print("Invalid move: Floor %d is not an adjacent tile." % floor_slot_id)
+				# If it's not a valid move, do nothing.
+				return
 		else:
 			# If it's not a valid move, do nothing.
 			return

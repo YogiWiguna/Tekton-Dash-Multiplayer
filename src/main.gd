@@ -98,7 +98,7 @@ func apply_level_data(data):
 ## Player
 # This function should completely replace your old 'update_player_spawns' function.
 func update_player_spawns(players_data: Dictionary):
-	# This function now ONLY runs on the host to manage all players.
+	# This function ONLY runs on the host to manage all players.
 	if not multiplayer.is_server():
 		return
 
@@ -118,8 +118,8 @@ func update_player_spawns(players_data: Dictionary):
 				var target_floor = floors_and_tiles_manager.floors_array[target_floor_id]
 				var start_pos = target_floor.global_transform.origin + Vector3(0, 0.5, 0)
 				
-				# Send the command to everyone to spawn this player at the correct position.
-				spawn_player_on_clients.rpc(p_data, start_pos)
+				# Send the command to everyone to spawn this player at the correct position and floor.
+				spawn_player_on_clients.rpc(p_data, start_pos, target_floor_id)
 			else:
 				print("Server Error: Could not find a valid start position for player number %d" % player_number)
 
@@ -134,24 +134,24 @@ func set_player_position(player_id: int, position: Vector3):
 
 # This command is sent from the host to everyone to create a character.
 @rpc("any_peer", "call_local")
-func spawn_player_on_clients(p_data: Dictionary, position: Vector3):
+func spawn_player_on_clients(p_data: Dictionary, position: Vector3, initial_floor_id: int):
 	var player_id = p_data["id"]
 
 	# This check prevents a character from being spawned twice on the same machine.
 	if spawned_players.has(player_id):
 		return
 	
-	print("RPC: Spawning player %s at %s" % [p_data["name"], position])
+	print("Spawning player %s at floor %d" % [p_data["name"], initial_floor_id])
 	var player_instance = player_scene.instantiate()
 	player_instance.name = str(player_id)
 	
 	add_child(player_instance)
-	player_instance.set_display_name(p_data["name"])
 	spawned_players[player_id] = player_instance
-	player_instance.set_multiplayer_authority(player_id)
 	
-	# Directly set the position that the server commanded.
+	player_instance.set_multiplayer_authority(player_id)
+	player_instance.set_display_name(p_data["name"])
 	player_instance.global_transform.origin = position
+	player_instance.set_initial_floor(initial_floor_id)
 
 	if player_id == multiplayer.get_unique_id():
 		current_player_node = player_instance
@@ -160,7 +160,6 @@ func spawn_player_on_clients(p_data: Dictionary, position: Vector3):
 @rpc("any_peer", "call_local")
 func despawn_player_on_clients(player_id: int):
 	if spawned_players.has(player_id):
-		print("RPC: Despawning player %d" % player_id)
 		var player_node = spawned_players[player_id]
 		if player_node == current_player_node:
 			current_player_node = null

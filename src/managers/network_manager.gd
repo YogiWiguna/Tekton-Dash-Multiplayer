@@ -72,39 +72,30 @@ func _register_player(player_name: String):
 	var new_player_id = multiplayer.get_remote_sender_id()
 	var new_player_number = players.size() + 1
 	players[new_player_id] = {"name": player_name, "id": new_player_id, "player_number": new_player_number}
-	print("Registering new player: '%s' (%d) as Player %d" % [player_name, new_player_id, new_player_number])
-
-	# 1. (MOVED UP) Send the game world data to the new player FIRST.
-	if not current_game_state.is_empty(): 
-		rpc_id(new_player_id, "receive_game_state", current_game_state) 
-
-	# 2. (ADDED) Wait a very short moment for the client to process the world data.
-	# This gives the client time to build the level before receiving spawn commands.
-	await get_tree().create_timer(0.1).timeout
-
-	# 3. Tell EVERYONE the player list has updated.
-	# This will trigger the host to spawn the NEW player on all screens.
+	
+	# 1. Tell EVERYONE the player list has updated. This spawns the NEW player.
 	rpc("_update_player_list", players)
 	
-	# 4. CATCH-UP LOGIC: Tell the new player about everyone who was already here.
+	# 2. CATCH-UP LOGIC: Tell the new player about everyone who was already here.
 	var main_node = get_node("/root/Main")
-	# Loop through all players currently in the game.
 	for player_id in players:
-		# We only care about players who are NOT the one who just joined.
-		if player_id != new_player_id: 
+		if player_id != new_player_id:
 			var p_data = players[player_id]
-			# Get the existing player's current, real-time position.
 			if main_node.spawned_players.has(player_id):
 				var existing_player_node = main_node.spawned_players[player_id]
 				var current_position = existing_player_node.global_transform.origin
+				var current_floor = existing_player_node.current_player_floor_id
 				
-				# Send a targeted command ONLY to the new client, telling them to spawn this existing player.
-				main_node.spawn_player_on_clients.rpc_id(new_player_id, p_data, current_position)
+				# Send a targeted command ONLY to the new client to spawn an existing player.
+				main_node.spawn_player_on_clients.rpc_id(new_player_id, p_data, current_position, current_floor)
+
+	# 3. Send the game world data to the new player.
+	if not current_game_state.is_empty():
+		rpc_id(new_player_id, "receive_game_state", current_game_state)
 
 @rpc("any_peer", "call_local")
 func _update_player_list(new_player_list):
 	players = new_player_list
-	# This signal triggers the spawn/despawn logic in main.gd for all players.
 	emit_signal("players_changed", players)
 
 # Called by the host from main.gd
