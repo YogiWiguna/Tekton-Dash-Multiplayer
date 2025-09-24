@@ -1,7 +1,7 @@
 [gd_resource type="ShaderMaterial" load_steps=3 format=3 uid="uid://c8da6r3jv6xir"]
 
 [ext_resource type="Shader" uid="uid://xe6cxapqiej0" path="res://assets/meshes/tiles_mesh/hightlighter.gdshader" id="1_ktdgc"]
-[ext_resource type="Texture2D" uid="uid://yyhwf0qd20fw" path="res://assets/meshes/tiles_mesh/Powerup seamless.png" id="2_ktdgc"]
+[ext_resource type="Texture2D" uid="uid://dfu2fiapixlyc" path="res://assets/meshes/tiles_mesh/Powerup seamless.png" id="2_ktdgc"]
 
 [resource]
 render_priority = 0

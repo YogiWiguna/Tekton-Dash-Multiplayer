@@ -32,5 +32,4 @@ text = "Player Name"
 font_size = 42
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
-root_path = NodePath("")
 replication_config = SubResource("SceneReplicationConfig_3u0vk")
