@@ -2,11 +2,11 @@ extends MeshInstance3D
 
 @onready var main = get_parent().get_parent() # or get_node("/root/main")
 @onready var floors_and_tiles_regions = get_parent()
-@onready var characters_manager = get_node("/root/Main/CharactersManager")
-@onready var obstacles = get_node("/root/Main/Obstacles")
-@onready var gui = get_node("/root/Main/Gui")
-@onready var dice = get_node("/root/Main/DiceManager")
-@onready var player_board = get_node("/root/Main/Gui/PlayerBoard")
+@onready var characters_manager = get_node_or_null("/root/Main/CharactersManager")
+@onready var obstacles = get_node_or_null("/root/Main/Obstacles")
+@onready var gui = get_node_or_null("/root/Main/Gui")
+@onready var dice = get_node_or_null("/root/Main/DiceManager")
+@onready var player_board = get_node_or_null("/root/Main/Gui/PlayerBoard")
 @onready var floor_static_body = $floor_static_body
 @onready var marker_camera = $marker_camera
 

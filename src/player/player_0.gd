@@ -5,7 +5,7 @@ extends CharacterBody3D
 @onready var player_mesh = $PlayerMesh
 @onready var player_name = $PlayerName
 @onready var player_collision = $PlayerMesh/StaticBody3D/PlayerCollision
-@onready var astar_map = get_node("/root/Main/AstarMap")
+@onready var astar_map = get_node_or_null("/root/Main/AstarMap")
 
 var move_speed: float = 4.0
 var path: Array = []

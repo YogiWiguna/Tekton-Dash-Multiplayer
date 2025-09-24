@@ -10,7 +10,7 @@ var default_rows : int = 10 # Default for rows is 10
 # Variable for player actions
 var player_actions : int = 2 
 
-@onready var network_manager = get_node("/root/NetworkManager")
+@onready var network_manager = get_node_or_null("/root/NetworkManager")
 @onready var floors_and_tiles_manager = $FloorsAndTileManager
 @onready var obstacles_manager = $Obstacles
 

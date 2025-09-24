@@ -4,7 +4,7 @@ extends Control
 @onready var host_button = $NetworkContainer/HostButton
 @onready var join_button = $NetworkContainer/JoinButton
 @onready var ip_line_edit = $NetworkContainer/IPInput
-@onready var network_manager = get_node("/root/NetworkManager")
+@onready var network_manager = get_node_or_null("/root/NetworkManager")
 
 func _ready():
 	host_button.disabled = true
