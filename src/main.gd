@@ -39,6 +39,24 @@ func _ready():
 		receive_game_state(initial_state)
 
 
+@rpc("any_peer", "call_local")
+func update_floor_occupancy(floor_id: int, player_id: int):
+	# Safety check to ensure the floor and manager exist
+	if not is_instance_valid(floors_and_tiles_manager) or floor_id < 0 or floor_id >= floors_and_tiles_manager.floors_array.size():
+		return
+
+	var floor_node = floors_and_tiles_manager.floors_array[floor_id]
+	
+	# -1 is used to signal that the player has left the floor
+	if player_id == -1:
+		floor_node.occupied_by_player = null
+	elif spawned_players.has(player_id):
+		# Assign the player node to the floor's occupied_by_player variable
+		floor_node.occupied_by_player = spawned_players[player_id]
+	else:
+		# If the player ID is not found, set to null as a fallback
+		floor_node.occupied_by_player = null
+
 func _on_players_changed(_players):
 	if multiplayer.is_server():
 		# A player connected or disconnected.
@@ -153,6 +171,11 @@ func spawn_player_on_clients(p_data: Dictionary, position: Vector3, initial_floo
 	player_instance.global_transform.origin = position
 	player_instance.set_initial_floor(initial_floor_id)
 
+	# Set the initial floor occupancy on all clients
+	if initial_floor_id != -1 and initial_floor_id < floors_and_tiles_manager.floors_array.size():
+		var initial_floor_node = floors_and_tiles_manager.floors_array[initial_floor_id]
+		initial_floor_node.occupied_by_player = player_instance
+	
 	if player_id == multiplayer.get_unique_id():
 		current_player_node = player_instance
 

@@ -11,6 +11,7 @@ var _network_rotation := Vector3.ZERO
 
 @onready var player_mesh = $PlayerMesh
 @onready var player_name = $PlayerName
+@onready var main = get_node("/root/Main")
 @onready var astar_map = get_node("/root/Main/AstarMap")
 @onready var characters_manager = get_node("/root/Main/CharactersManager")
 
@@ -31,8 +32,16 @@ func _physics_process(delta):
 				current_path_index += 1
 				if current_path_index >= path.size():
 					path.clear()
+					var old_floor_id = current_player_floor_id
 					current_player_floor_id = _target_floor_id
 					_target_floor_id = -1
+
+					# Tell all clients to update floor occupancy
+					if old_floor_id != -1:
+						main.update_floor_occupancy.rpc(old_floor_id, -1) # Set old floor to empty
+					if current_player_floor_id != -1:
+						main.update_floor_occupancy.rpc(current_player_floor_id, multiplayer.get_unique_id()) # Set new floor to occupied
+			
 					characters_manager.update_valid_moves(self)
 			
 			if not path.is_empty():
