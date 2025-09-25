@@ -84,6 +84,7 @@ func set_current_turn_globally(player_id: int, new_round: int):
 	round_label.text = "Round: %d" % current_round
 	
 	current_turn_player_id = player_id
+	
 	if spawned_players.has(player_id):
 		current_player_node = spawned_players[player_id]
 		player_actions = 2
@@ -93,6 +94,11 @@ func set_current_turn_globally(player_id: int, new_round: int):
 		print("--- Round %d | It is now Player %d's turn. ---" % [current_round, player_id])
 	else:
 		print("Error: Could not find player with ID %d to start turn." % player_id)
+	
+	if multiplayer.get_unique_id() != player_id:
+		characters_manager.adjacents_array.clear()
+		characters_manager.occupied_adjacents_array.clear()
+		floors_and_tiles_manager.unhover_adjacents_floor()
 
 func receive_game_state(state: Dictionary):
 	if world_built: return # Prevent rebuilding the world
