@@ -1,0 +1,74 @@
+[gd_scene load_steps=7 format=3 uid="uid://dr3uy236lixdv"]
+
+[ext_resource type="Script" uid="uid://dhn1kluxt17vg" path="res://src/float_actions_gui/float_actions_gui.gd" id="1_2jyfw"]
+[ext_resource type="Script" uid="uid://dcgyr1caxg765" path="res://src/float_actions_gui/float_gui_container.gd" id="1_8iqs2"]
+[ext_resource type="Texture2D" uid="uid://xcj1b0tqumdl" path="res://assets/graphics/actions_gui/action_take_01.png" id="3_wgysm"]
+[ext_resource type="Texture2D" uid="uid://8kio01tnst5q" path="res://assets/graphics/actions_gui/action_put_01.png" id="4_8tj6x"]
+[ext_resource type="Texture2D" uid="uid://brrn5cbj5eeje" path="res://assets/graphics/actions_gui/action_spawn_01.png" id="5_ruuvr"]
+[ext_resource type="Texture2D" uid="uid://ws1b5gq4y7n4" path="res://assets/graphics/actions_gui/nothing_01.png" id="6_qan06"]
+
+[node name="float_actions_gui" type="Control" node_paths=PackedStringArray("gui_element")]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.7, 0.7)
+mouse_filter = 1
+script = ExtResource("1_2jyfw")
+gui_element = NodePath(".")
+
+[node name="float_gui_container" type="Container" parent="."]
+layout_direction = 1
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -141.42856
+offset_top = -144.28572
+offset_right = 158.57144
+offset_bottom = 305.7143
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(150, 225)
+script = ExtResource("1_8iqs2")
+
+[node name="take_tile_button" type="Button" parent="float_gui_container"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+icon = ExtResource("3_wgysm")
+flat = true
+icon_alignment = 1
+
+[node name="put_tile_button" type="Button" parent="float_gui_container"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+icon = ExtResource("4_8tj6x")
+flat = true
+
+[node name="spawn_tile_button" type="Button" parent="float_gui_container"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+icon = ExtResource("5_ruuvr")
+flat = true
+icon_alignment = 1
+
+[node name="do_nothing_button" type="Button" parent="float_gui_container"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+icon = ExtResource("6_qan06")
+flat = true
+icon_alignment = 1

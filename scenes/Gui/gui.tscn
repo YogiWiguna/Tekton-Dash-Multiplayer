@@ -1,14 +1,26 @@
-[gd_scene format=3 uid="uid://dd6lekysjsxqh"]
+[gd_scene load_steps=2 format=3 uid="uid://dd6lekysjsxqh"]
+
+[ext_resource type="PackedScene" uid="uid://dnpffqygmfcvn" path="res://scenes/player_board_and_blue_print/player_board.tscn" id="1_q21vd"]
 
 [node name="Gui" type="Control"]
 layout_mode = 3
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="PlayerBoard" type="Control" parent="."]
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
 
 [node name="Node3D" type="Node3D" parent="."]
+
+[node name="PlayerBoard" parent="." instance=ExtResource("1_q21vd")]
+layout_mode = 1
+
+[node name="RoundLabel" type="Label" parent="."]
+layout_mode = 1
+offset_left = 24.0
+offset_top = 26.0
+offset_right = 64.0
+offset_bottom = 71.0
+theme_override_font_sizes/font_size = 32
+text = "0"

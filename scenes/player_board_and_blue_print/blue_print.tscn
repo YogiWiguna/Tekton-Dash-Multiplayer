@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3 uid="uid://6vipqrnmo28x"]
+
+[ext_resource type="Script" uid="uid://df01ppw38frs0" path="res://src/player_board_and_blue_print/blue_print.gd" id="1_vu7cx"]
+
+[node name="blue_print" type="Control"]
+custom_minimum_size = Vector2(108, 108)
+layout_direction = 2
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_vu7cx")
+
+[node name="blue_print_grid" type="GridContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -54.0
+offset_top = -54.0
+offset_right = 54.0
+offset_bottom = 54.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/h_separation = 36
+theme_override_constants/v_separation = 36
+columns = 3

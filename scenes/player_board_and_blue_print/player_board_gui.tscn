@@ -1,0 +1,35 @@
+[gd_scene load_steps=2 format=3 uid="uid://rj04v81gms7"]
+
+[ext_resource type="Script" uid="uid://de80bfld7hxwo" path="res://src/player_board_and_blue_print/player_board_gui.gd" id="1_aahm1"]
+
+[node name="player_board_gui" type="Control"]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.9, 0.9)
+script = ExtResource("1_aahm1")
+
+[node name="player_board_grid" type="GridContainer" parent="."]
+custom_minimum_size = Vector2(176, 176)
+layout_direction = 2
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -104.456
+offset_top = -90.5317
+offset_right = 71.5443
+offset_bottom = 85.4683
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+theme_override_constants/h_separation = 36
+theme_override_constants/v_separation = 36
+columns = 5

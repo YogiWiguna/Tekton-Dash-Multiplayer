@@ -1,0 +1,62 @@
+[gd_scene load_steps=8 format=3 uid="uid://fviw70ah40dl"]
+
+[ext_resource type="Script" uid="uid://b5sjvf01g0h6" path="res://src/player_board_and_blue_print/player_board_slot.gd" id="1_rkjwg"]
+[ext_resource type="Texture2D" path="res://assets/graphics/player_board_and_blue_print/player_board_slot.png" id="2_pakdj"]
+[ext_resource type="Texture2D" uid="uid://cajx78l3wlbmv" path="res://assets/materials/player_board_and_blue_print/player_board_slot.tres" id="3_1ae0w"]
+[ext_resource type="Texture2D" path="res://assets/graphics/player_board_and_blue_print/selection_indicator.png" id="4_igwj3"]
+[ext_resource type="Texture2D" path="res://assets/graphics/player_board_and_blue_print/adjacent_slot.png" id="5_cu167"]
+[ext_resource type="Texture2D" path="res://assets/graphics/player_board_and_blue_print/target_slot.png" id="6_ir4fx"]
+[ext_resource type="Texture2D" path="res://assets/graphics/player_board_and_blue_print/error_indicator.png" id="7_5powe"]
+
+[node name="InventorySlot" type="Panel"]
+script = ExtResource("1_rkjwg")
+
+[node name="background" type="TextureRect" parent="."]
+show_behind_parent = true
+layout_mode = 1
+offset_right = 32.0
+offset_bottom = 32.0
+texture = ExtResource("2_pakdj")
+stretch_mode = 2
+
+[node name="item_sprite" type="Sprite2D" parent="."]
+position = Vector2(16, 16)
+texture = ExtResource("3_1ae0w")
+
+[node name="selection_indicator" type="TextureRect" parent="."]
+visible = false
+show_behind_parent = true
+layout_mode = 0
+offset_right = 32.0
+offset_bottom = 32.0
+texture = ExtResource("4_igwj3")
+stretch_mode = 2
+
+[node name="adjacent_indicator" type="TextureRect" parent="."]
+visible = false
+show_behind_parent = true
+layout_mode = 1
+offset_right = 32.0
+offset_bottom = 32.0
+texture = ExtResource("5_cu167")
+stretch_mode = 2
+
+[node name="target_indicator" type="TextureRect" parent="."]
+visible = false
+show_behind_parent = true
+layout_mode = 1
+offset_right = 32.0
+offset_bottom = 32.0
+texture = ExtResource("6_ir4fx")
+stretch_mode = 2
+
+[node name="error_indicator" type="TextureRect" parent="."]
+visible = false
+layout_mode = 0
+offset_right = 34.0
+offset_bottom = 34.0
+texture = ExtResource("7_5powe")
+stretch_mode = 2
+
+[connection signal="mouse_entered" from="." to="." method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="." to="." method="_on_mouse_exited"]

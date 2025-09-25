@@ -1,5 +1,7 @@
 extends Node3D
 
+signal world_build_complete
+
 @export var current_level_id : int = 1 
 @export var player_scene: PackedScene = preload("res://scenes/player/player_0.tscn")
 
@@ -13,21 +15,35 @@ var player_actions : int = 2
 @onready var network_manager = get_node_or_null("/root/NetworkManager")
 @onready var floors_and_tiles_manager = $FloorsAndTileManager
 @onready var obstacles_manager = $Obstacles
+@onready var characters_manager = $CharactersManager
+@onready var turn_manager = $TurnManager
+@onready var round_label = $Gui/RoundLabel
 
 var current_game_state = {}
 var spawned_players = {}
 
 var current_player_node = null
+var current_turn_player_id: int = -1
 
 var start_positions = { 1: 1, 2: 2, 3: 0, 4: 3 }
+var initial_state_generated = false
 
 var world_built = false
+var game_started: bool = false
+
+var current_round: int = 0
+
+# Variables to queue a turn change if it arrives too early.
+var queued_turn_id: int = -1
+var queued_round: int = -1
 
 func _ready():
 	network_manager.game_state_received.connect(receive_game_state)
 	network_manager.players_changed.connect(update_player_spawns)
-	
-	if multiplayer.is_server():
+
+	# Host generates the world state immediately upon entering the scene.
+	if multiplayer.is_server() and not initial_state_generated:
+		initial_state_generated = true
 		var initial_state = {
 			"player_number": player_number,
 			"default_rows": default_rows,
@@ -35,34 +51,48 @@ func _ready():
 			"obstacles": obstacles_manager.generate_obstacle_data()
 		}
 		network_manager.sync_game_state(initial_state)
-		# Host builds its own world immediately
+		# Host builds its own world from the generated state.
 		receive_game_state(initial_state)
 
+func _process(delta):
+	if multiplayer.is_server() and world_built and game_started:
+		if player_actions <= 0:
+			turn_manager.start_next_turn()
 
+# NEW RPC: Called by any player to tell the host to reduce the action count.
+@rpc("any_peer")
+func use_player_action():
+	if not multiplayer.is_server(): return
+	player_actions -= 1
+
+# NEW RPC: Called by any player to tell the host to end the turn immediately.
+@rpc("any_peer")
+func end_player_turn():
+	if not multiplayer.is_server(): return
+	player_actions = 0
+
+# This is called by the TurnManager to sync the current turn across all clients.
 @rpc("any_peer", "call_local")
-func update_floor_occupancy(floor_id: int, player_id: int):
-	# Safety check to ensure the floor and manager exist
-	if not is_instance_valid(floors_and_tiles_manager) or floor_id < 0 or floor_id >= floors_and_tiles_manager.floors_array.size():
+func set_current_turn_globally(player_id: int, new_round: int):
+	if not world_built:
+		queued_turn_id = player_id
+		queued_round = new_round
 		return
-
-	var floor_node = floors_and_tiles_manager.floors_array[floor_id]
 	
-	# -1 is used to signal that the player has left the floor
-	if player_id == -1:
-		floor_node.occupied_by_player = null
-	elif spawned_players.has(player_id):
-		# Assign the player node to the floor's occupied_by_player variable
-		floor_node.occupied_by_player = spawned_players[player_id]
+	game_started = true
+	current_round = new_round
+	round_label.text = "Round: %d" % current_round
+	
+	current_turn_player_id = player_id
+	if spawned_players.has(player_id):
+		current_player_node = spawned_players[player_id]
+		player_actions = 2
+		
+		characters_manager.update_valid_moves(current_player_node)
+		current_player_node.start_turn()
+		print("--- Round %d | It is now Player %d's turn. ---" % [current_round, player_id])
 	else:
-		# If the player ID is not found, set to null as a fallback
-		floor_node.occupied_by_player = null
-
-func _on_players_changed(_players):
-	if multiplayer.is_server():
-		# A player connected or disconnected.
-		# Send the latest game state to ensure everyone is synced,
-		# which is especially important for late joiners.
-		network_manager.sync_game_state(current_game_state)
+		print("Error: Could not find player with ID %d to start turn." % player_id)
 
 func receive_game_state(state: Dictionary):
 	if world_built: return # Prevent rebuilding the world
@@ -71,9 +101,31 @@ func receive_game_state(state: Dictionary):
 	await floors_and_tiles_manager.build_from_data(state)
 	obstacles_manager.build_from_data(state)
 	world_built = true
+	world_build_complete.emit()
 	
 	# After the world is built, ensure the players are spawned correctly
 	update_player_spawns(network_manager.players)
+
+func _on_world_build_complete():
+	if queued_turn_id != -1:
+		set_current_turn_globally(queued_turn_id, queued_round)
+		queued_turn_id = -1
+		queued_round = -1
+
+@rpc("any_peer", "call_local")
+func update_floor_occupancy(floor_id: int, player_id: int):
+	if not is_instance_valid(floors_and_tiles_manager) or floor_id < 0 or floor_id >= floors_and_tiles_manager.floors_array.size():
+		return
+
+	var floor_node = floors_and_tiles_manager.floors_array[floor_id]
+	if player_id == -1:
+		floor_node.occupied_by_player = null
+	elif spawned_players.has(player_id):
+		floor_node.occupied_by_player = spawned_players[player_id]
+
+func _on_players_changed(_players):
+	if multiplayer.is_server():
+		network_manager.sync_game_state(current_game_state)
 
 func setup_and_sync_level():
 	"""(HOST ONLY) Generates level data, applies it, and sends it to clients."""
@@ -129,17 +181,16 @@ func update_player_spawns(players_data: Dictionary):
 	for player_id in players_data:
 		if not spawned_players.has(player_id):
 			var p_data = players_data[player_id]
-			var player_number = p_data.get("player_number", -1)
-			var target_floor_id = start_positions.get(player_number, -1)
+			var p_num = p_data.get("player_number", -1)
+			var floor_id = start_positions.get(p_num, -1)
 
-			if target_floor_id != -1 and target_floor_id < floors_and_tiles_manager.floors_array.size():
-				var target_floor = floors_and_tiles_manager.floors_array[target_floor_id]
+			if floor_id != -1:
+				var target_floor = floors_and_tiles_manager.floors_array[floor_id]
 				var start_pos = target_floor.global_transform.origin + Vector3(0, 0.5, 0)
-				
-				# Send the command to everyone to spawn this player at the correct position and floor.
-				spawn_player_on_clients.rpc(p_data, start_pos, target_floor_id)
-			else:
-				print("Server Error: Could not find a valid start position for player number %d" % player_number)
+				spawn_player_on_clients.rpc(p_data, start_pos, floor_id)
+			
+	#if not turn_manager.game_started:
+		#turn_manager.start_game()
 
 @rpc("any_peer", "call_local")
 func set_player_position(player_id: int, position: Vector3):
@@ -172,12 +223,12 @@ func spawn_player_on_clients(p_data: Dictionary, position: Vector3, initial_floo
 	player_instance.set_initial_floor(initial_floor_id)
 
 	# Set the initial floor occupancy on all clients
-	if initial_floor_id != -1 and initial_floor_id < floors_and_tiles_manager.floors_array.size():
-		var initial_floor_node = floors_and_tiles_manager.floors_array[initial_floor_id]
-		initial_floor_node.occupied_by_player = player_instance
-	
-	if player_id == multiplayer.get_unique_id():
-		current_player_node = player_instance
+	#if initial_floor_id != -1 and initial_floor_id < floors_and_tiles_manager.floors_array.size():
+		#var initial_floor_node = floors_and_tiles_manager.floors_array[initial_floor_id]
+		#initial_floor_node.occupied_by_player = player_instance
+	#
+	#if player_id == multiplayer.get_unique_id():
+		#current_player_node = player_instance
 
 # This command is sent from the host to everyone to remove a character.
 @rpc("any_peer", "call_local")

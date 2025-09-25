@@ -1,0 +1,66 @@
+[gd_scene load_steps=4 format=3 uid="uid://dnpffqygmfcvn"]
+
+[ext_resource type="Script" uid="uid://ct0orf2k7dlk4" path="res://src/player_board_and_blue_print/player_board.gd" id="1_60wpu"]
+[ext_resource type="Texture2D" uid="uid://bhv4vnd6pvo5l" path="res://assets/graphics/player_board_and_blue_print/board_player_1.png" id="3_3fkwn"]
+[ext_resource type="PackedScene" uid="uid://6vipqrnmo28x" path="res://scenes/player_board_and_blue_print/blue_print.tscn" id="3_ulqor"]
+
+[node name="PlayerBoard" type="Control"]
+custom_minimum_size = Vector2(176, 176)
+layout_direction = 2
+layout_mode = 3
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = -320.0
+offset_right = 256.0
+offset_bottom = -144.0
+grow_vertical = 0
+scale = Vector2(1.58, 1.58)
+script = ExtResource("1_60wpu")
+
+[node name="player_board_bg" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = -30.0
+offset_top = -16.0
+offset_right = 263.0
+offset_bottom = 298.0
+scale = Vector2(0.726, 0.66)
+texture = ExtResource("3_3fkwn")
+expand_mode = 1
+
+[node name="player_board_grid" type="GridContainer" parent="."]
+custom_minimum_size = Vector2(176, 176)
+layout_direction = 2
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -104.456
+offset_top = -90.5317
+offset_right = 71.5443
+offset_bottom = 85.4683
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+theme_override_constants/h_separation = 36
+theme_override_constants/v_separation = 36
+columns = 5
+
+[node name="tekton_player" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 211.0
+offset_top = 81.0
+offset_right = 862.0
+offset_bottom = 605.0
+scale = Vector2(0.2, 0.2)
+
+[node name="blue_print" parent="." instance=ExtResource("3_ulqor")]
+visible = false
+layout_mode = 1
+offset_left = -100.658
+offset_top = -238.3
+offset_right = 7.342
+offset_bottom = -130.3

@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://xw0m2tw7f8t1"]
+
+[ext_resource type="Shader" path="res://scenes/floor_and_tiles/obstacle_tile_animation.gdshader" id="1_le4mf"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_le4mf")
+shader_parameter/speed = 1.0
+shader_parameter/stripe_width = 0.1
+shader_parameter/color1 = Color(1, 1, 1, 1)
+shader_parameter/color2 = Color(0.847059, 0.247059, 0.278431, 1)
+shader_parameter/pattern_scale = 5.0
+shader_parameter/emission_strength = 1.0
