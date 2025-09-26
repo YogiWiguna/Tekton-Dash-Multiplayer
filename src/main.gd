@@ -21,6 +21,7 @@ var player_actions : int = 2
 @onready var dice = $DiceManager
 @onready var round_label = $Gui/RoundLabel
 
+var ready_players = []
 var current_game_state = {}
 var spawned_players = {}
 
@@ -34,6 +35,7 @@ var world_built = false
 var game_started: bool = false
 
 var current_round: int = 0
+var is_changing_turn: bool = false
 
 # Variables to queue a turn change if it arrives too early.
 var queued_turn_id: int = -1
@@ -42,7 +44,8 @@ var queued_round: int = -1
 func _ready():
 	network_manager.game_state_received.connect(receive_game_state)
 	network_manager.players_changed.connect(update_player_spawns)
-
+	network_manager.players_changed.connect(_on_main_players_changed)
+	
 	# Host generates the world state immediately upon entering the scene.
 	if multiplayer.is_server() and not initial_state_generated:
 		initial_state_generated = true
@@ -58,8 +61,25 @@ func _ready():
 
 func _process(delta):
 	if multiplayer.is_server() and world_built and game_started:
-		if player_actions <= 0:
-			turn_manager.start_next_turn()
+		# Check if a turn should end AND we aren't already in the middle of changing turns.
+		if player_actions <= 0 and not is_changing_turn:
+			# 1. Set the flag immediately to prevent this from running multiple times.
+			is_changing_turn = true
+			# 2. Defer the call to wait one frame, allowing network packets to sync.
+			turn_manager.call_deferred("start_next_turn")
+
+func _on_main_players_changed(players: Dictionary):
+	if not multiplayer.is_server(): return
+
+	var current_player_ids = players.keys()
+	var cleaned_ready_players = []
+	for player_id in ready_players:
+		if player_id in current_player_ids:
+			cleaned_ready_players.append(player_id)
+	
+	if ready_players.size() != cleaned_ready_players.size():
+		print("SERVER: A player disconnected. Cleaned the ready list.")
+		ready_players = cleaned_ready_players
 
 # ========================================
 # ===     MULTIPLAYER TILE SYNC        ===
@@ -76,14 +96,21 @@ func end_player_turn():
 	if not multiplayer.is_server(): return
 	player_actions = 0
 
+@rpc("any_peer")
+func report_client_is_ready():
+	if not multiplayer.is_server(): return
+	
+	var client_id = multiplayer.get_remote_sender_id()
+	if client_id not in ready_players:
+		print("SERVER: Player %d has reported READY." % client_id)
+		ready_players.append(client_id)
+		turn_manager.check_if_all_players_are_ready()
+
 # --- TAKE TILE (STAGE 1: HIDE) ---
 @rpc("any_peer")
 func request_hide_tile(floor_id: int):
 	var sender_id = multiplayer.get_remote_sender_id()
-	print("SERVER: Received request to hide tile at floor %d from Player %d" % [floor_id, sender_id])
-	if sender_id != 0 and sender_id != current_turn_player_id:
-		print("SERVER: Request denied. It is not Player %d's turn." % sender_id)
-		return
+	if sender_id != 0 and sender_id != current_turn_player_id: return
 
 	var tile_node = floors_and_tiles_manager.tiles_array[floor_id]
 	var third_token = tile_node.get_node("token_tile3")
@@ -96,10 +123,7 @@ func request_hide_tile(floor_id: int):
 	elif first_token.visible: token_to_hide_name = first_token.name
 	
 	if token_to_hide_name != "":
-		print("SERVER: Found token '%s' to hide. Broadcasting to all players." % token_to_hide_name)
 		sync_hide_tile.rpc(floor_id, token_to_hide_name)
-	else:
-		print("SERVER: FAILED. No visible tile found on floor %d. No broadcast sent." % floor_id)
 
 @rpc("any_peer", "call_local")
 func sync_hide_tile(floor_id: int, token_name: String):
@@ -290,10 +314,7 @@ func _get_tile_data_for_spawn(spawn_type):
 
 @rpc("any_peer", "call_local")
 func set_current_turn_globally(player_id: int, new_round: int):
-	if not world_built:
-		queued_turn_id = player_id
-		queued_round = new_round
-		return
+	if not world_built: return
 	
 	game_started = true
 	current_round = new_round
@@ -305,11 +326,17 @@ func set_current_turn_globally(player_id: int, new_round: int):
 		current_player_node = spawned_players[player_id]
 		player_actions = 2
 		
+		# 3. Reset the flag now that the new turn is officially starting.
+		if multiplayer.is_server():
+			is_changing_turn = false
+		
 		characters_manager.update_valid_moves(current_player_node)
 		current_player_node.start_turn()
 		print("--- Round %d | It is now Player %d's turn. ---" % [current_round, player_id])
 	else:
 		print("Error: Could not find player with ID %d to start turn." % player_id)
+		if multiplayer.is_server():
+			is_changing_turn = false
 	
 	if multiplayer.get_unique_id() != player_id:
 		characters_manager.adjacents_array.clear()

@@ -114,8 +114,8 @@ func _process(_delta):
 		return
 	
 	snap_gui_to_3d_position()
-	_disabled_button()
-	_do_nothing_button()
+	#update_button_states()
+	#_do_nothing_button()
 
 
 # ========================================
@@ -205,22 +205,6 @@ func _setup_button_positions():
 
 	# Force update of positions
 	container.arrange_children()
-
-func _do_nothing_button():
-	do_nothing_button.disabled = false 
-
-func _on_do_nothing_button():
-	if not main.turn_manager.is_local_players_turn(): return
-
-	print("Player chose to do nothing, ending turn.")
-	hide()
-	
-	# Tell the host to end the turn immediately.
-	if multiplayer.is_server():
-		main.end_player_turn()
-	else:
-		main.end_player_turn.rpc_id(1)
-
 
 func _change_take_icon():
 	checking_tiles_on_player_pos(player.current_player_floor_id)
@@ -407,6 +391,42 @@ func snap_gui_to_3d_position():
 		gui_element.global_position = screen_position - gui_element.size / 2
 		#print("Gui global pos : ", gui_element.global_position)
 
+func show_and_update():
+	# This function is called from player_0.gd after the player has moved.
+	
+	# 1. First, update the button states based on the player's NEW location.
+	update_button_states()
+	
+	# 2. Then, update the icon based on the tile (or lack thereof) at the new location.
+	_change_take_icon()
+	
+	# 3. Finally, make the UI visible.
+	self.show()
+
+func update_button_states():
+	var current_player_node = main.current_player_node
+	if not is_instance_valid(current_player_node):
+		take_tile_button.disabled = true
+		put_tile_button.disabled = true
+		return
+
+	var current_floor_id = current_player_node.current_player_floor_id
+	
+	var start_and_finish_row = [0,1,2,3,36,37,38,39]
+	if current_floor_id in start_and_finish_row:
+		take_tile_button.disabled = true
+		put_tile_button.disabled = true
+		return
+
+	var tile_node = floors_and_tiles_regions.tiles_array[current_floor_id]
+	
+	var is_tile_present = tile_node.get_node("token_tile").visible or \
+						  tile_node.get_node("token_tile2").visible or \
+						  tile_node.get_node("token_tile3").visible
+
+	take_tile_button.disabled = not is_tile_present
+	put_tile_button.disabled = is_tile_present
+
 # ========================================
 # ===            Take Action           ===
 # ========================================
@@ -561,6 +581,19 @@ func _on_spawn_tile_button():
 	
 	# Hover tiles 
 	gui.hover_tiles_for_spawn_tile_action()
+
+func _on_do_nothing_button():
+	if not main.turn_manager.is_local_players_turn(): return
+
+	print("Player chose to do nothing, ending turn.")
+	hide()
+	
+	player.has_used_action_this_turn = true
+	# Tell the host to end the turn immediately.
+	if multiplayer.get_unique_id() == 1:
+		main.use_player_action()
+	else:
+		main.use_player_action.rpc_id(1)
 
 # ========================================
 # ===           Power Card             ===

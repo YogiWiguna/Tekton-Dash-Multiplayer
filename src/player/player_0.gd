@@ -1,5 +1,3 @@
-# file: src/player/player_0.gd
-
 extends CharacterBody3D
 
 var current_player_floor_id: int = -1
@@ -23,7 +21,6 @@ var move_speed: float = 4.0
 var path: Array = []
 var current_path_index: int = 0
 var is_second_lap: bool = false
-#var is_player_already_move: bool = false
 
 var has_moved_this_turn: bool = false
 var has_used_action_this_turn: bool = false
@@ -34,25 +31,27 @@ func _ready():
 func start_turn():
 	has_moved_this_turn = false
 	has_used_action_this_turn = false
-
-	# Show the GUI because the player can perform an action.
-	float_actions_gui._change_take_icon()
+	if is_multiplayer_authority():
+		# 1. Recalculate and display the valid movement options.
+		characters_manager.update_valid_moves(self)
+		
+		# 2. Show and update the action buttons (Take, Put, etc.).
+		float_actions_gui.call_deferred("show_and_update")
 
 # This function is called when the player's CollisionShape is clicked.
 func _on_input_event(_camera, event, _position, _normal, _shape_idx):
-	# Check if the input is a left mouse button press.
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
-		# IMPORTANT: Only toggle the GUI if this character is controlled by this machine.
 		if is_multiplayer_authority():
-			# Toggle the visibility of the float_actions_gui.
-			float_actions_gui.visible = not float_actions_gui.visible
-			
-			# If we just made it visible, update its state.
-			if float_actions_gui.visible:
-				float_actions_gui._change_take_icon()
+			if main.turn_manager.is_local_players_turn():
+				float_actions_gui.visible = not float_actions_gui.visible
+				if float_actions_gui.visible:
+					float_actions_gui._change_take_icon()
 
 func _physics_process(delta):
 	if is_multiplayer_authority():
+		if not main.turn_manager.is_local_players_turn() or has_used_action_this_turn:
+			float_actions_gui.hide()
+		
 		if not path.is_empty():
 			var target_point = path[current_path_index]
 			if global_transform.origin.distance_to(target_point) < 0.1:
@@ -78,7 +77,7 @@ func _physics_process(delta):
 					
 					# 3. Show the action GUI if the player hasn't already used an action.
 					if not has_used_action_this_turn:
-						show_float_gui()
+						float_actions_gui.show_and_update()
 
 			if not path.is_empty():
 				var move_direction = global_transform.origin.direction_to(path[current_path_index])
