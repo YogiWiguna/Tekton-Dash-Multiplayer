@@ -154,12 +154,10 @@ func request_spawn_tile(clicked_floor_id: int):
 	print("SERVER: Received spawn request from Player %d for floor %d" % [sender_id, clicked_floor_id])
 	
 	# --- 1. The Server's Authoritative Roll ---
-	# The dice is rolled ONCE, only here on the server.
-	dice.roll()
-	var authoritative_dice_result = dice.final_result
-	print("SERVER: Authoritative roll is %d" % authoritative_dice_result)
+	# It now calls the new function that ONLY generates a number.
+	var authoritative_dice_result = dice.generate_random_result()
 	
-	# --- 2. Determine the full outcome based on the one true roll ---
+	# --- (The rest of the logic remains the same) ---
 	var floor_to_place_on_id = clicked_floor_id
 	if authoritative_dice_result == 2:
 		floor_to_place_on_id = current_player_node.current_player_floor_id
@@ -169,21 +167,18 @@ func request_spawn_tile(clicked_floor_id: int):
 	var spawn_type = obstacle_mesh.get_surface_override_material(0).resource_name
 	
 	var specific_tile_material = _get_specific_tile_material_for_spawn(spawn_type, authoritative_dice_result)
-	
-	# --- 3. Broadcast the Authoritative Roll to All Players for Animation ---
+
+	# --- 2. Broadcast the Authoritative Roll to All Players for Animation ---
 	sync_show_dice_roll.rpc(authoritative_dice_result)
 	
-	# --- 4. Wait for the Animation to play ---
+	# --- 3. Wait for the Animation to play ---
 	await get_tree().create_timer(2.0).timeout
 	
-	# --- 5. Broadcast the Final Tile Placement ---
+	# --- 4. Broadcast the Final Tile Placement ---
 	if authoritative_dice_result != 5 and specific_tile_material:
-		print("SERVER: Broadcasting tile placement to all players.")
-		# Ensure you have a function named sync_place_spawned_tile
 		sync_place_spawned_tile.rpc(floor_to_place_on_id, specific_tile_material.resource_path)
-	else:
-		print("SERVER: No tile placed (Zonk or null material).")
-
+	
+	# --- 5. Finalize the Action ---
 	_set_variables_after_spawn()
 
 
@@ -228,12 +223,8 @@ func _get_specific_tile_material_for_spawn(spawn_type: String, dice_result: int)
 
 @rpc("any_peer", "call_local")
 func sync_show_dice_roll(result: int):
-	# This broadcast tells all clients to show the dice roll animation.
-	# You will need a corresponding function on your DiceManager script.
-	dice.show()
-	# We assume your DiceManager can show a specific result. If not, this can be adapted.
-	dice.final_result = result 
-	dice.roll() # Assuming roll() plays the animation
+	# This broadcast now calls the new animation-only function on all clients.
+	dice.play_animation_for_result(result)
 
 @rpc("any_peer", "call_local")
 func sync_place_spawned_tile(floor_id: int, new_material_path: String):

@@ -123,3 +123,21 @@ func _on_roll_animation_completed() -> void:
 	Global.dice_rolled.emit()
 	await get_tree().create_timer(1.0).timeout
 	self.hide()
+
+# It does NOT play any animation itself.
+func generate_random_result() -> int:
+	final_result = randi_range(1, 6)
+	print("SERVER DICE ROLLED: ", final_result)
+	return final_result
+
+# NEW FUNCTION: This is for EVERYONE (server and clients) to play the animation.
+# It takes a result and does NOT generate a new random number.
+func play_animation_for_result(result: int):
+	if is_rolling:
+		return
+	
+	is_rolling = true
+	final_result = result
+	show() # Make sure the dice is visible for everyone
+	print("Playing animation for result: ", final_result)
+	_play_roll_animation()
