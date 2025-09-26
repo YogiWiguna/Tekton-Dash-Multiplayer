@@ -12,6 +12,7 @@ var _network_rotation := Vector3.ZERO
 @onready var main = get_node("/root/Main")
 @onready var astar_map = get_node("/root/Main/AstarMap")
 @onready var characters_manager = get_node("/root/Main/CharactersManager")
+@onready var floors_and_tiles_manager = get_node("/root/Main/FloorsAndTileManager")
 @onready var marker_camera = $MarkerCamera
 @onready var player_mesh = $PlayerMesh
 @onready var player_collision = $PlayerCollision
@@ -51,18 +52,15 @@ func _on_input_event(_camera, event, _position, _normal, _shape_idx):
 				float_actions_gui._change_take_icon()
 
 func _physics_process(delta):
-	# Code for the player character that THIS machine controls.
 	if is_multiplayer_authority():
-		#if self != main.current_player_node and float_actions_gui.visible:
-			#float_actions_gui.hide()
-		
-		# (The authoritative movement logic remains the same)
 		if not path.is_empty():
 			var target_point = path[current_path_index]
 			if global_transform.origin.distance_to(target_point) < 0.1:
 				current_path_index += 1
 				if current_path_index >= path.size():
+					# --- MOVEMENT IS COMPLETE ---
 					path.clear()
+					
 					# Finalize position and update occupancy for all players.
 					global_transform.origin = target_point 
 					var old_floor_id = current_player_floor_id
@@ -71,10 +69,17 @@ func _physics_process(delta):
 					main.update_floor_occupancy.rpc(old_floor_id, -1)
 					main.update_floor_occupancy.rpc(current_player_floor_id, get_multiplayer_authority())
 					
-					# After moving, if an action is available, show the GUI.
+					# 1. Unhover all the old movement indicators from the board.
+					floors_and_tiles_manager.unhover_adjacents_floor()
+					
+					# 2. Clear the character manager's arrays so it doesn't hold old data.
+					characters_manager.adjacents_array.clear()
+					characters_manager.occupied_adjacents_array.clear()
+					
+					# 3. Show the action GUI if the player hasn't already used an action.
 					if not has_used_action_this_turn:
-						float_actions_gui.show()
-						float_actions_gui._change_take_icon()
+						show_float_gui()
+
 			if not path.is_empty():
 				var move_direction = global_transform.origin.direction_to(path[current_path_index])
 				velocity = move_direction * move_speed
@@ -83,12 +88,8 @@ func _physics_process(delta):
 			velocity = Vector3.ZERO
 			move_and_slide()
 		
-		# Periodically send our position to other players.
 		update_network_position.rpc(global_transform.origin, global_rotation)
-
-	# Code for ALL OTHER players that are controlled remotely.
 	else:
-		# Smoothly move (interpolate) towards the last received network position.
 		global_transform.origin = global_transform.origin.lerp(_network_position, 0.2)
 		global_rotation = global_rotation.slerp(_network_rotation, 0.2)
 
