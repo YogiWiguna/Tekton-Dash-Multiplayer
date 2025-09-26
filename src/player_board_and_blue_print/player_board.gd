@@ -2,7 +2,7 @@
 extends Control
 
 # Get node 
-@onready var map = get_node("/root/Main")
+@onready var main = get_node("/root/Main")
 @onready var gui = get_parent()
 @onready var blue_print = $blue_print
 @onready var player_board_bg = $player_board_bg
@@ -52,7 +52,7 @@ var item = TextureRect.new()
 var id_from_grab_tiles : int
 var hologram_array := []
 
-# Var for put item on arena or map
+# Var for put item on arena or main
 var is_put_item = false
 var id_for_put_tiles : int
 
@@ -132,10 +132,10 @@ func _on_deselect_slot_button_pressed():
 	#spawn_item()
 
 # Checking player who is playing
-func is_any_player_playing() -> bool:
-	return (map.is_player_1_playing or map.is_player_2_playing or
-		map.is_player_3_playing or map.is_player_4_playing or
-		map.is_player_5_playing or map.is_player_6_playing)
+#func is_any_player_playing() -> bool:
+	#return (main.is_player_1_playing or main.is_player_2_playing or
+		#main.is_player_3_playing or main.is_player_4_playing or
+		#main.is_player_5_playing or main.is_player_6_playing)
 
 
 # Manages slot selection and item movement
@@ -143,7 +143,7 @@ func _handle_click(slot_index):
 	print("player board slot index: ", slot_index)
 
 	# Swap tile 
-	var current_player_node =  map.current_player_node
+	var current_player_node =  main.current_player_node
 	var float_actions_gui =  current_player_node.float_actions_gui
 	# Swap tiles Working here
 	if inventory[slot_index] != null and float_actions_gui.is_swap_tiles:
@@ -192,7 +192,7 @@ func _handle_click(slot_index):
 			last_slot_tile_placed = slot_index
 		else:
 			current_inventory_slot = inventory_slot_array[slot_index]
-			if map.player_actions == 1:
+			if main.player_actions == 1:
 				check_inventory_slot_is_fill_or_empty(current_inventory_slot)
 				return
 			# selected_slot is the current selected
@@ -212,7 +212,7 @@ func _handle_click(slot_index):
 			move_item_to_targeted()
 			# Checking for player turn
 			# Set the player action into zero after move tiles on player board for end the turn
-			map.player_actions = 0
+			main.player_actions = 0
 
 # Selects a slot and emits a signal
 # Update the select_slot function
@@ -376,29 +376,42 @@ func spawn_item_on_board(_slot_index):
 # PUT ITEM
 # Select the item from player board and then will show it to the cuurent player place
 func put_item_from_board(_slot_index):
-	#print("put item from board")
-	# Check if the player choose on the playaer board is empty
-	if inventory[_slot_index] == null:
-		check_inventory_slot_is_fill_or_empty(current_inventory_slot)
+	# Ensure the selected slot has an item.
+	var selected_mat = inventory[_slot_index]
+	if selected_mat == null:
+		check_inventory_slot_is_fill_or_empty(inventory_slot_array[_slot_index])
 		return
-	if inventory[_slot_index] in Global.tiles_hologram_material_list:
-		var _id_remove_hologram_tiles = inventory[_slot_index].item_id
-		for _hologram_tiles in hologram_array:
-			if _hologram_tiles.item_id == _id_remove_hologram_tiles:
-				var _index_to_remove = hologram_array.find(_hologram_tiles)
-				hologram_array.remove_at(_index_to_remove)
-				break
-		is_hologram_item = true
-		#print(hologram_array)
-	# Set the id_for_put_tiles to use it on obstacle.gd
+
+	# --- NEW LOGIC: Find the ID of the selected material ---
+	var item_id = -1
+	var is_hologram = false
+
+	# Check if it's a normal material
+	item_id = Global.item_material_list.find(selected_mat)
+	
+	# If not found, check if it's a hologram material
+	if item_id == -1:
+		item_id = Global.tiles_hologram_material_list.find(selected_mat)
+		if item_id != -1:
+			is_hologram = true
+
+	# If the material is not found in either list, something is wrong.
+	if item_id == -1:
+		print("ERROR: Could not identify the selected tile material.")
+		return
+
+	# --- Send the ID and hologram status to the server ---
+	var floor_id = main.current_player_node.current_player_floor_id
+	if multiplayer.is_server():
+		main.request_put_tile(floor_id, item_id, is_hologram)
+	else:
+		main.request_put_tile.rpc_id(1, floor_id, item_id, is_hologram)
+
+	# --- Update local UI ---
 	id_for_put_tiles = _slot_index
-	# Deselect the slot after we put it 
 	deselect_slot()
-	# Emit signal to inform that the item is succes put on arena 
 	item_put_succes.emit()
-	# Delete the selected item to put on player board
-	delete_item(_slot_index)
-	# Set the is_put_item to false after the player succes put the item
+	delete_item(_slot_index) # Remove item from the local player's board
 	is_put_item = false
 
 # Moves or swaps items between the selected slot and target slot

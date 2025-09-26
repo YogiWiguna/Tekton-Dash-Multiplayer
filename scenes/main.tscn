@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://djsu6kddrf6gg"]
+[gd_scene load_steps=11 format=3 uid="uid://djsu6kddrf6gg"]
 
 [ext_resource type="Script" uid="uid://dcsnkcxfhjtda" path="res://src/astar_grid_map/astar_map.gd" id="1_jyhfs"]
 [ext_resource type="PackedScene" uid="uid://o0e2fvowo4vp" path="res://scenes/astar_grid_map/astar_grid_map.tscn" id="1_sugp2"]
@@ -6,8 +6,10 @@
 [ext_resource type="Script" uid="uid://dwip5omhko22" path="res://src/managers/obstacles_manager.gd" id="3_tefeu"]
 [ext_resource type="Script" uid="uid://p18q5o6bidke" path="res://src/managers/floors_and_tiles_manager.gd" id="4_jyhfs"]
 [ext_resource type="PackedScene" uid="uid://dd6lekysjsxqh" path="res://scenes/gui/gui.tscn" id="5_tbgi4"]
+[ext_resource type="Script" uid="uid://b1e4vtvjh18j2" path="res://src/camera/camera_3d.gd" id="6_85g3d"]
 [ext_resource type="Script" uid="uid://y50d67wbnv75" path="res://src/managers/characters_manager.gd" id="6_o6xl0"]
 [ext_resource type="Script" uid="uid://hjwur02o8673" path="res://src/managers/turn_managers.gd" id="8_tipki"]
+[ext_resource type="PackedScene" uid="uid://dova8gxyf0r2t" path="res://scenes/dice/dice.tscn" id="10_choun"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_tbgi4")
@@ -26,15 +28,17 @@ script = ExtResource("1_jyhfs")
 visible = false
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.39073107, 0.92050487, 0, -0.92050487, 0.39073107, 3, 12, 6.52)
+transform = Transform3D(1, 0, 0, 0, 0.39073107, 0.92050487, 0, -0.92050487, 0.39073107, 1, 12, 6.52)
 fov = 25.0
+script = ExtResource("6_85g3d")
 
 [node name="CharactersManager" type="Node3D" parent="."]
 script = ExtResource("6_o6xl0")
-
-[node name="DiceManager" type="Node3D" parent="."]
 
 [node name="Gui" parent="." instance=ExtResource("5_tbgi4")]
 
 [node name="TurnManager" type="Node" parent="."]
 script = ExtResource("8_tipki")
+
+[node name="DiceManager" parent="." instance=ExtResource("10_choun")]
+visible = false

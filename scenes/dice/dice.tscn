@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://dova8gxyf0r2t"]
+
+[ext_resource type="Script" uid="uid://c8udvpno206oj" path="res://src/dice/dice.gd" id="1_jtx7s"]
+[ext_resource type="ArrayMesh" uid="uid://vesdxuwcfo37" path="res://assets/meshes/dice/dice.res" id="2_xn2gm"]
+
+[node name="DiceManager" type="Node3D"]
+script = ExtResource("1_jtx7s")
+
+[node name="DiceMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(5.84122e-08, 0, -0.3, 0, 0.3, 0, 0.3, 0, 5.84122e-08, 0, 0, 0)
+mesh = ExtResource("2_xn2gm")
+skeleton = NodePath("")
+
+[node name="FaceLabel" type="Label3D" parent="."]
+transform = Transform3D(0.999977, 0, 0.00675437, 0, 1, 0, -0.00675437, 0, 0.999977, 0, 0.565, -0.585889)
+billboard = 1
+text = "Test"

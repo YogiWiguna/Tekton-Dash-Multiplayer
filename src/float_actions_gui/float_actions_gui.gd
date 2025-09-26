@@ -6,7 +6,7 @@ extends Control
 @onready var main = get_node("/root/Main")
 @onready var floors_and_tiles_regions = get_node("/root/Main/FloorsAndTileManager")
 @onready var player_board = get_node("/root/Main/Gui/PlayerBoard")
-@onready var obstacles = get_node("/root/Main/obstacles")
+@onready var obstacles = get_node("/root/Main/Obstacles")
 #@onready var power_card = get_node("/root/Main/gui/power_card")
 @onready var gui = get_node("/root/Main/Gui")
 #@onready var dice = get_node("/root/Main/DiceManager")
@@ -413,102 +413,66 @@ func snap_gui_to_3d_position():
 func _on_take_tile_button():
 	if not main.turn_manager.is_local_players_turn(): return
 	if player.has_used_action_this_turn: return
-		
-	print("Take tile")
-	player.has_used_action_this_turn = true # Set the flag
+	
+	player.has_used_action_this_turn = true
+	main.current_player_node.float_actions_gui.hide()
+	
+	var floor_id = player.current_player_floor_id
+	var tile_node = floors_and_tiles_regions.tiles_array[floor_id]
+	
+	# --- 1. Determine which specific token mesh is being taken ---
+	var token_tile_mesh
+	var third_token = tile_node.get_node("token_tile3")
+	var second_token = tile_node.get_node("token_tile2")
+	var first_token = tile_node.get_node("token_tile")
+
+	if third_token.visible:
+		token_tile_mesh = third_token
+	elif second_token.visible:
+		token_tile_mesh = second_token
+	else:
+		token_tile_mesh = first_token
+
+	# --- 2. Validate the action ---
+	if not token_tile_mesh.get_surface_override_material(0):
+		print("ERROR: Tried to take a tile from an empty slot.")
+		player.has_used_action_this_turn = false
+		main.player_actions += 1 
+		main.current_player_node.float_actions_gui.show()
+		return
+	
+	# --- 3. Stage 1: Send "Hide Tile" Request ---
+	if multiplayer.is_server():
+		main.request_hide_tile(floor_id)
+	else:
+		main.request_hide_tile.rpc_id(1, floor_id)
+
+	# --- 4. Handle Local UI and Await Completion ---
+	var taken_tile_mat = token_tile_mesh.get_surface_override_material(0)
+	var resource_name = taken_tile_mat.resource_name
+	var is_hologram = resource_name in Global.tiles_hologram_name
+	var id_taken_tile = -1
+	
+	if is_hologram:
+		id_taken_tile = Global.tiles_hologram_name.find(resource_name)
+		player_board.is_hologram_item = true
+	else:
+		id_taken_tile = Global.tiles_name.find(resource_name)
+
+	player_board.summon_item(id_taken_tile)
+	
+	await player_board.item_grab_succes
+
 	if multiplayer.get_unique_id() == 1:
 		main.use_player_action()
 	else:
 		main.use_player_action.rpc_id(1)
-	#print("Player Current floor id : ", player.current_player_floor_id)
-	main.current_player_node.float_actions_gui.hide()
-	var current_player = main.current_player_node
-	# Checking tiles on the player position 
-	checking_tiles_on_player_pos(player.current_player_floor_id)
-	var tile = floors_and_tiles_regions.tiles_array[player.current_player_floor_id]
-	var hover_movement_tile = tile.hover_movement_tile
-	hover_movement_tile.set_surface_override_material(0, take_tile_floor_mat)
-	hover_movement_tile.show()
 	
-	# Check if the third token is visible (Player will take the most top)
-	if third_token_tile.visible == true:
-		#print("Take 3rd")
-		take_tile_and_place_on_player_board(third_token_tile, hover_movement_tile)
-	elif second_token_tile.visible == true:
-		#print("Take 2nd")
-		take_tile_and_place_on_player_board(second_token_tile, hover_movement_tile)
+	# --- 5. Stage 2: Send "Finalize" Request ---
+	if multiplayer.is_server():
+		main.request_nullify_tile(floor_id, token_tile_mesh.name)
 	else:
-		#print("Take 1st")
-		take_tile_and_place_on_player_board(first_token_tile, hover_movement_tile)
-
-
-func take_tile_and_place_on_player_board(_token_tile_mesh, _hover_movement_tile):
-	var tile_node = _token_tile_mesh.get_parent()
-	# Set material
-	taken_tile_mat = _token_tile_mesh.get_surface_override_material(0)
-
-	var resource_name_of_taken_tile = taken_tile_mat.resource_name
-	#print("take resource name : ", resource_name_of_taken_tile)
-	var _id_taken_tile = Global.tiles_name.find(resource_name_of_taken_tile)
-	
-	# Animation Take Tile
-	_token_tile_mesh.hide()
-	# Tekton custom animation 
-	var _player = get_parent()
-
-	# Check if the current grab is hologram tiles
-	if resource_name_of_taken_tile in Global.tiles_hologram_name:
-		_id_taken_tile = Global.tiles_hologram_name.find(resource_name_of_taken_tile)
-		#print("id taken tile : ", _id_taken_tile)
-		player_board.is_hologram_item = true
-		print("player hologram : ", player_board.is_hologram_item)
-	
-	await get_tree().create_timer(1.0).timeout
-	
-	## Spawn the item (tiles) into the player board 
-	player_board.summon_item(_id_taken_tile)
-
-	# Await for deselected after place the tile
-	await player_board.item_grab_succes
-	
-	# Set the tiles on floor into null (like delete the tiles)
-	_token_tile_mesh.set_surface_override_material(0,null)
-	_token_tile_mesh.position = Vector3(0,0,0)
-	_token_tile_mesh.rotation_degrees = Vector3(0,0,0)
-	
-	# update the player_board gui
-	#gui.change_turn()
-	
-	print("selected slot pb: ", player_board.selected_slot)
-	print("player hologram : ", player_board.is_hologram_item)
-	# We need to check if the hologram tiles is taken and also check 
-	if player_board.is_hologram_item :
-		print("Hologram grabbed")
-		player_board.is_hologram_item = false
-		if Global.current_round >= 3:
-			_hover_movement_tile.set_surface_override_material(0, power_up_floor_mat)
-			print('acive')
-			#power_card_active()
-			#await Global.power_card_active
-
-	#await get_tree().create_timer(2.0).timeout
-	if Global.sabotage_meter_update:
-		Global.sabotage_meter_update = false
-		var sabotage_meter = gui.sabotage_meter
-		var _player_id = main.current_player_node.player_id
-		sabotage_meter._sabotage_meter_update_value(_player_id)
-
-	# Substract the player actions because the grab is succed
-	#main.player_actions -= 1
-	Global.is_action_done = true
-	Global.is_power_card_active = false
-	# Check the action, if player on a boost obstacle
-	#check_action_if_player_on_boost_obstacle()
-	# Update max tiles on player board
-	recount_max_tiles_on_player_board()
-	# Set float gui after choose the action button
-	#if !main.current_player_node.is_player_clicked:
-		#main.current_player_node.show_float_gui()
+		main.request_nullify_tile.rpc_id(1, floor_id, token_tile_mesh.name)
 
 # ========================================
 # ===            Put Action            ===
@@ -520,7 +484,7 @@ func _on_put_tile_button():
 	print("Put tile")
 	#print("Player Current floor id : ", player.current_player_floor_id)
 	player.has_used_action_this_turn = true
-	main.use_player_action.rpc_id(1)
+	
 	main.current_player_node.float_actions_gui.hide()
 	checking_tiles_on_player_pos(player.current_player_floor_id)
 	# Deselect the selected inventory 
@@ -549,10 +513,6 @@ func put_tile_on_current_player_pos(_token_tile_mesh, _hover_movement_tile):
 	# Await for deselected after choose the tile
 	await player_board.item_put_succes
 	
-	#_token_tile_mesh.scale = Vector3(0,0,0)
-	
-	#main.current_player_node.animation_player.play("drop_tile_2")
-	
 	# Get the id for current selected_slot from inventory 
 	var _selected_slot = player_board.id_for_put_tiles
 	# Get the item_id from current selected slot 
@@ -569,39 +529,17 @@ func put_tile_on_current_player_pos(_token_tile_mesh, _hover_movement_tile):
 		player_board.is_hologram_item = false
 	#print("material : ", _material)
 
-	#player.players_meshes.tiles.set_surface_override_material(0,_material)
-	#main.current_player_node.animation_player.play("animation-pack/drop_tile_1")
-	await get_tree().create_timer(3.5).timeout
-
 	# pb = player board
 	# Recount the tiles on the pb
 	recount_max_tiles_on_player_board()
 
-	# Set the surface material for token tile mesh we gonna put in the arena or main
-	#player.players_meshes.tiles.hide()
-	_token_tile_mesh.set_surface_override_material(0, _material)
-	_token_tile_mesh.show()
-	print("token tile mesh show")
-
-	# Animation for put tile
-	#if _token_tile_mesh.name == "token_tile":
-		#tile_node.animation_player.play("put_token_tile")
-	#elif _token_tile_mesh.name == "token_tile2":
-		#tile_node.animation_player.play("put_token_tile_2")
-	#elif _token_tile_mesh.name == "token_tile3":
-		#tile_node.animation_player.play("put_token_tile_3")
+	if multiplayer.get_unique_id() == 1:
+		main.use_player_action()
+	else:
+		main.use_player_action.rpc_id(1)
 	
-	await get_tree().create_timer(1.0).timeout
-	# Substract the player actions because the put is succed
-	#main.player_actions -= 1
 	Global.is_action_done = true
 	_hover_movement_tile.hide()
-
-	# Check the action, if player on a boost obstacle
-	#check_action_if_player_on_boost_obstacle()
-	# Set float gui after choose the action button
-	#if !main.current_player_node.is_player_clicked:
-		#main.current_player_node.show_float_gui()
 
 # ========================================
 # ===          Spawn Action            ===
@@ -611,63 +549,18 @@ func _on_spawn_tile_button():
 	if player.has_used_action_this_turn: return
 	
 	player.has_used_action_this_turn = true
-	# Tell the host we used an action.
-	main.use_player_action.rpc_id(1)
+	
 	print("spawn tiles")
-	main.current_camera.set_priority(0)
-	main.camera_tactic.set_priority(10)
 	
 	# Set the is_spawn_tile into true
 	Global.is_spawn_tile = true
 	Global.is_action_done = true
-	# Hide player board
-	gui.show_or_hide_for_spawn_tile(false)
 	
 	# hide the float action gui
 	main.current_player_node.float_actions_gui.hide()
 	
 	# Hover tiles 
-	hover_tiles_for_spawn_tile_action()
-
-func hover_tiles_for_spawn_tile_action():
-	for _id in obstacles.tiles_spawn_id_array:
-		var obstacle_tile = floors_and_tiles_regions.tiles_array[_id].get_node("obstacle_tile")
-		var obstacle_tile_animation = floors_and_tiles_regions.tiles_array[_id].get_node("obstacle_tile_animation")
-		
-		# Set the scale and UV for the obstacle tile 
-		obstacle_tile.scale = Vector3(1.1 ,1.1 ,1.1)
-		obstacle_tile.get_surface_override_material(0).set_uv1_scale(Vector3(0.85,0.85,0.85))
-		obstacle_tile.get_surface_override_material(0).set_uv1_offset(Vector3(0.075,0.075,0))
-		
-		# Set the colors of the Shaders of obstacle_tile_animation
-		# Coin Tile
-		if _id == obstacles.tiles_spawn_id_array[0]:
-			obstacle_tile_animation.set_surface_override_material(0, coin_obstacle_animation)
-		# Diamond Tile
-		elif _id == obstacles.tiles_spawn_id_array[1] :
-			obstacle_tile_animation.set_surface_override_material(0, diamond_obstacle_animation)
-		# Star Tile
-		elif _id == obstacles.tiles_spawn_id_array[2] :
-			obstacle_tile_animation.set_surface_override_material(0, star_obstacle_animation)
-		# Heart Tile
-		elif _id == obstacles.tiles_spawn_id_array[3] :
-			obstacle_tile_animation.set_surface_override_material(0, heart_obstacle_animation)
-		obstacle_tile_animation.show()
-
-func unhover_spawn_tile():
-	var hover_movement_mesh
-	for _id in obstacles.tiles_spawn_id_array:
-		var obstacle_tile = floors_and_tiles_regions.tiles_array[_id].get_node("obstacle_tile")
-		var obstacle_tile_animation = floors_and_tiles_regions.tiles_array[_id].get_node("obstacle_tile_animation")
-		
-		obstacle_tile.scale = Vector3(1.24, 1.24, 1.24)
-		obstacle_tile.get_surface_override_material(0).set_uv1_scale(Vector3(1,1,1))
-		obstacle_tile.get_surface_override_material(0).set_uv1_offset(Vector3(0,0,0))
-		
-		hover_movement_mesh = floors_and_tiles_regions.tiles_array[_id].get_node("hover_movement_tile")
-		hover_movement_mesh.hide()
-		obstacle_tile_animation.hide()
-
+	gui.hover_tiles_for_spawn_tile_action()
 
 # ========================================
 # ===           Power Card             ===

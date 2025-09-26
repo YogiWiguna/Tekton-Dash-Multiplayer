@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://dd6lekysjsxqh"]
+[gd_scene load_steps=3 format=3 uid="uid://dd6lekysjsxqh"]
 
 [ext_resource type="PackedScene" uid="uid://dnpffqygmfcvn" path="res://scenes/player_board_and_blue_print/player_board.tscn" id="1_q21vd"]
+[ext_resource type="Script" uid="uid://5r8p7perkt0r" path="res://src/gui/gui.gd" id="1_x2qsw"]
 
 [node name="Gui" type="Control"]
 layout_mode = 3
@@ -10,6 +11,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
+script = ExtResource("1_x2qsw")
 
 [node name="Node3D" type="Node3D" parent="."]
 

@@ -2,7 +2,7 @@ extends Node3D
 
 signal world_build_complete
 
-@export var current_level_id : int = 1 
+@export var current_level_id : int = 1
 @export var player_scene: PackedScene = preload("res://scenes/player/player_0.tscn")
 
 # Variables for size of arena
@@ -10,13 +10,15 @@ var player_number : int = 4 # Default for player number is 4
 var default_rows : int = 10 # Default for rows is 10
 
 # Variable for player actions
-var player_actions : int = 2 
+var player_actions : int = 2
 
 @onready var network_manager = get_node_or_null("/root/NetworkManager")
 @onready var floors_and_tiles_manager = $FloorsAndTileManager
 @onready var obstacles_manager = $Obstacles
 @onready var characters_manager = $CharactersManager
 @onready var turn_manager = $TurnManager
+@onready var gui = $Gui
+@onready var dice = $DiceManager
 @onready var round_label = $Gui/RoundLabel
 
 var current_game_state = {}
@@ -59,19 +61,242 @@ func _process(delta):
 		if player_actions <= 0:
 			turn_manager.start_next_turn()
 
-# NEW RPC: Called by any player to tell the host to reduce the action count.
+# ========================================
+# ===     MULTIPLAYER TILE SYNC        ===
+# ========================================
+
+# --- ACTION MANAGEMENT ---
 @rpc("any_peer")
 func use_player_action():
 	if not multiplayer.is_server(): return
 	player_actions -= 1
 
-# NEW RPC: Called by any player to tell the host to end the turn immediately.
 @rpc("any_peer")
 func end_player_turn():
 	if not multiplayer.is_server(): return
 	player_actions = 0
 
-# This is called by the TurnManager to sync the current turn across all clients.
+# --- TAKE TILE (STAGE 1: HIDE) ---
+@rpc("any_peer")
+func request_hide_tile(floor_id: int):
+	var sender_id = multiplayer.get_remote_sender_id()
+	print("SERVER: Received request to hide tile at floor %d from Player %d" % [floor_id, sender_id])
+	if sender_id != 0 and sender_id != current_turn_player_id:
+		print("SERVER: Request denied. It is not Player %d's turn." % sender_id)
+		return
+
+	var tile_node = floors_and_tiles_manager.tiles_array[floor_id]
+	var third_token = tile_node.get_node("token_tile3")
+	var second_token = tile_node.get_node("token_tile2")
+	var first_token = tile_node.get_node("token_tile")
+
+	var token_to_hide_name = ""
+	if third_token.visible: token_to_hide_name = third_token.name
+	elif second_token.visible: token_to_hide_name = second_token.name
+	elif first_token.visible: token_to_hide_name = first_token.name
+	
+	if token_to_hide_name != "":
+		print("SERVER: Found token '%s' to hide. Broadcasting to all players." % token_to_hide_name)
+		sync_hide_tile.rpc(floor_id, token_to_hide_name)
+	else:
+		print("SERVER: FAILED. No visible tile found on floor %d. No broadcast sent." % floor_id)
+
+@rpc("any_peer", "call_local")
+func sync_hide_tile(floor_id: int, token_name: String):
+	var token_mesh = floors_and_tiles_manager.tiles_array[floor_id].get_node(token_name)
+	token_mesh.hide()
+
+# --- TAKE TILE (STAGE 2: NULLIFY) ---
+@rpc("any_peer")
+func request_nullify_tile(floor_id: int, token_name: String):
+	sync_nullify_tile.rpc(floor_id, token_name)
+
+@rpc("any_peer", "call_local")
+func sync_nullify_tile(floor_id: int, token_name: String):
+	var token_mesh = floors_and_tiles_manager.tiles_array[floor_id].get_node(token_name)
+	token_mesh.set_surface_override_material(0, null)
+
+# --- PUT TILE ---
+@rpc("any_peer")
+func request_put_tile(floor_id: int, item_id: int, is_hologram: bool):
+	var tile_node = floors_and_tiles_manager.tiles_array[floor_id]
+	var first_token = tile_node.get_node("token_tile")
+	var second_token = tile_node.get_node("token_tile2")
+	var third_token = tile_node.get_node("token_tile3")
+
+	var token_to_update_name = ""
+	if second_token.visible and floor_id in obstacles_manager.stacks_special_id_array:
+		token_to_update_name = third_token.name
+	elif first_token.visible and (floor_id in obstacles_manager.stacks_id_array or floor_id in obstacles_manager.stacks_special_id_array):
+		token_to_update_name = second_token.name
+	elif not first_token.visible:
+		token_to_update_name = first_token.name
+
+	var material_path = ""
+	if is_hologram:
+		material_path = Global.tiles_hologram_surface_material[item_id]
+	else:
+		material_path = Global.tiles_surface_material[item_id]
+
+	if token_to_update_name != "" and material_path != "":
+		sync_put_tile.rpc(floor_id, token_to_update_name, material_path)
+
+@rpc("any_peer", "call_local")
+func sync_put_tile(floor_id: int, token_name: String, item_res_path: String):
+	var token_mesh = floors_and_tiles_manager.tiles_array[floor_id].get_node(token_name)
+	token_mesh.set_surface_override_material(0, load(item_res_path))
+	token_mesh.show()
+
+# --- SPAWN TILE ---
+@rpc("any_peer")
+func request_spawn_tile(clicked_floor_id: int):
+	var sender_id = multiplayer.get_remote_sender_id()
+	print("SERVER: Received spawn request from Player %d for floor %d" % [sender_id, clicked_floor_id])
+	
+	# --- 1. The Server's Authoritative Roll ---
+	# The dice is rolled ONCE, only here on the server.
+	dice.roll()
+	var authoritative_dice_result = dice.final_result
+	print("SERVER: Authoritative roll is %d" % authoritative_dice_result)
+	
+	# --- 2. Determine the full outcome based on the one true roll ---
+	var floor_to_place_on_id = clicked_floor_id
+	if authoritative_dice_result == 2:
+		floor_to_place_on_id = current_player_node.current_player_floor_id
+
+	var clicked_tile_node = floors_and_tiles_manager.tiles_array[clicked_floor_id]
+	var obstacle_mesh = clicked_tile_node.get_node("obstacle_tile")
+	var spawn_type = obstacle_mesh.get_surface_override_material(0).resource_name
+	
+	var specific_tile_material = _get_specific_tile_material_for_spawn(spawn_type, authoritative_dice_result)
+	
+	# --- 3. Broadcast the Authoritative Roll to All Players for Animation ---
+	sync_show_dice_roll.rpc(authoritative_dice_result)
+	
+	# --- 4. Wait for the Animation to play ---
+	await get_tree().create_timer(2.0).timeout
+	
+	# --- 5. Broadcast the Final Tile Placement ---
+	if authoritative_dice_result != 5 and specific_tile_material:
+		print("SERVER: Broadcasting tile placement to all players.")
+		# Ensure you have a function named sync_place_spawned_tile
+		sync_place_spawned_tile.rpc(floor_to_place_on_id, specific_tile_material.resource_path)
+	else:
+		print("SERVER: No tile placed (Zonk or null material).")
+
+	_set_variables_after_spawn()
+
+
+@rpc("any_peer", "call_local")
+func sync_spawn_tile(floor_id: int, new_material_path: String):
+	# All clients receive this message and perform the same simple visual update.
+	var token_tile = floors_and_tiles_manager.tiles_array[floor_id].get_node("token_tile")
+	token_tile.set_surface_override_material(0, load(new_material_path))
+	token_tile.show()
+
+
+# --- HELPER FUNCTIONS (Copy these into main.gd) ---
+func _get_specific_tile_material_for_spawn(spawn_type: String, dice_result: int) -> Material:
+	var is_hologram = (dice_result == 3 or dice_result == 4)
+
+	# Handle simple cases first
+	if spawn_type == "star_tile_spawn":
+		return Global.star_hologram_tile_surface_mat if is_hologram else Global.star_tile_surface_mat
+	if spawn_type == "diamond_tile_spawn":
+		return Global.diamond_hologram_tile_surface_mat if is_hologram else Global.diamond_tile_surface_mat
+	if spawn_type == "heart_tile_spawn":
+		return Global.heart_hologram_tile_surface_mat if is_hologram else Global.heart_tile_surface_mat
+	if spawn_type == "coin_tile_spawn":
+		return Global.coin_hologram_tile_surface_mat if is_hologram else Global.coin_tile_surface_mat
+
+	# Handle the random choice cases. Only the server runs this part.
+	if spawn_type == "coin_and_heart_tile_spawn":
+		var choice = randi_range(0, 1) # Server's random choice
+		if choice == 0: # Coin
+			return Global.coin_hologram_tile_surface_mat if is_hologram else Global.coin_tile_surface_mat
+		else: # Heart
+			return Global.heart_hologram_tile_surface_mat if is_hologram else Global.heart_tile_surface_mat
+			
+	if spawn_type == "diamond_and_star_tile_spawn":
+		var choice = randi_range(0, 1) # Server's random choice
+		if choice == 0: # Diamond
+			return Global.diamond_hologram_tile_surface_mat if is_hologram else Global.diamond_tile_surface_mat
+		else: # Star
+			return Global.star_hologram_tile_surface_mat if is_hologram else Global.star_tile_surface_mat
+
+	return null
+
+@rpc("any_peer", "call_local")
+func sync_show_dice_roll(result: int):
+	# This broadcast tells all clients to show the dice roll animation.
+	# You will need a corresponding function on your DiceManager script.
+	dice.show()
+	# We assume your DiceManager can show a specific result. If not, this can be adapted.
+	dice.final_result = result 
+	dice.roll() # Assuming roll() plays the animation
+
+@rpc("any_peer", "call_local")
+func sync_place_spawned_tile(floor_id: int, new_material_path: String):
+	# This is the old sync_spawn_tile function, renamed.
+	var token_tile = floors_and_tiles_manager.tiles_array[floor_id].get_node("token_tile")
+	token_tile.set_surface_override_material(0, load(new_material_path))
+	token_tile.show()
+
+@rpc("any_peer", "call_local")
+func sync_ui_after_spawn():
+	# This broadcast tells all clients to clean up their UI.
+	# It calls the function that is now in our new gui.gd script.
+	gui.unhover_spawn_tile()
+
+func _set_variables_after_spawn():
+	# This logic runs on the server after a spawn action.
+	use_player_action()
+	sync_reset_spawn_state.rpc()
+	
+	# After handling the state, send a broadcast to all clients to update their UI.
+	sync_ui_after_spawn.rpc()
+
+@rpc("any_peer", "call_local")
+func sync_reset_spawn_state():
+	# This is a broadcast message from the server to all clients.
+	# When a client receives this, it knows the spawn action is complete.
+	Global.is_spawn_tile = false
+
+func _choose_hologram_or_common_tiles(dice_result: int, tiles_hologram, tiles_common):
+	var tile_chosen
+	match dice_result:
+		1, 6, 2:
+			tile_chosen = tiles_common
+		3, 4:
+			tile_chosen = tiles_hologram
+	return tile_chosen
+
+# Note: The _get_tile_data_for_spawn function you already have in main.gd is correct.
+# Ensure it is named _get_tile_data_for_spawn to avoid conflicts.
+func _get_tile_data_for_spawn(spawn_type):
+	var random_id = randi_range(0,1)
+	match spawn_type:
+		"star_tile_spawn":
+			return {"hologram": Global.star_hologram_tile_surface_mat, "common": Global.star_tile_surface_mat}
+		"diamond_tile_spawn":
+			return {"hologram": Global.diamond_hologram_tile_surface_mat, "common": Global.diamond_tile_surface_mat}
+		"heart_tile_spawn":
+			return {"hologram": Global.heart_hologram_tile_surface_mat, "common": Global.heart_tile_surface_mat}
+		"coin_tile_spawn":
+			return {"hologram": Global.coin_hologram_tile_surface_mat, "common": Global.coin_tile_surface_mat}
+		"coin_and_heart_tile_spawn":
+			if random_id == 0: return {"hologram": Global.coin_hologram_tile_surface_mat, "common": Global.coin_tile_surface_mat}
+			else: return {"hologram": Global.heart_hologram_tile_surface_mat, "common": Global.heart_tile_surface_mat}
+		"diamond_and_star_tile_spawn":
+			if random_id == 0: return {"hologram": Global.diamond_hologram_tile_surface_mat, "common": Global.diamond_tile_surface_mat}
+			else: return {"hologram": Global.star_hologram_tile_surface_mat, "common": Global.star_tile_surface_mat}
+	return null
+
+
+# ========================================
+# ===      EXISTING FUNCTIONS          ===
+# ========================================
+
 @rpc("any_peer", "call_local")
 func set_current_turn_globally(player_id: int, new_round: int):
 	if not world_built:
@@ -109,8 +334,12 @@ func receive_game_state(state: Dictionary):
 	world_built = true
 	world_build_complete.emit()
 	
-	# After the world is built, ensure the players are spawned correctly
 	update_player_spawns(network_manager.players)
+	
+	if queued_turn_id != -1:
+		set_current_turn_globally(queued_turn_id, queued_round)
+		queued_turn_id = -1
+		queued_round = -1
 
 func _on_world_build_complete():
 	if queued_turn_id != -1:
@@ -134,8 +363,6 @@ func _on_players_changed(_players):
 		network_manager.sync_game_state(current_game_state)
 
 func setup_and_sync_level():
-	"""(HOST ONLY) Generates level data, applies it, and sends it to clients."""
-	# 1. Generate all the random data.
 	var obstacle_data = obstacles_manager.generate_obstacle_data()
 	var tile_data = floors_and_tiles_manager.generate_random_tile_data()
 	
@@ -146,57 +373,43 @@ func setup_and_sync_level():
 		"current_level_id": current_level_id
 	}
 	
-	# 2. Apply the data locally on the host.
 	apply_level_data(game_state)
 	
-	# 3. Send the authoritative data to all clients.
 	network_manager.sync_game_state(game_state)
 
 func _on_game_state_received():
-	"""(CLIENT ONLY) Called when the client receives the initial game state."""
 	var state = network_manager.game_state
 	apply_level_data(state)
 
 func apply_level_data(data):
-	"""(HOST & CLIENTS) Builds the level from the authoritative data dictionary."""
-	# Set variables that might affect generation first.
 	if data.has("player_number"):
 		self.player_number = data.player_number
 	if data.has("current_level_id"):
 		self.current_level_id = data.current_level_id
 
-	# Apply the synchronized layouts.
 	if data.has("obstacles"):
 		obstacles_manager.apply_obstacle_data(data.obstacles)
 	if data.has("tiles"):
 		floors_and_tiles_manager.apply_random_tile_data(data.tiles)
 
-## Player
-# This function should completely replace your old 'update_player_spawns' function.
 func update_player_spawns(players_data: Dictionary):
-	# This function ONLY runs on the host to manage all players.
 	if not multiplayer.is_server():
 		return
 
-	# Check for players who disconnected and tell clients to despawn them.
 	for player_id in spawned_players.keys():
 		if not players_data.has(player_id):
 			despawn_player_on_clients.rpc(player_id)
 
-	# Check for new players and tell clients to spawn them.
 	for player_id in players_data:
 		if not spawned_players.has(player_id):
 			var p_data = players_data[player_id]
 			var p_num = p_data.get("player_number", -1)
 			var floor_id = start_positions.get(p_num, -1)
 
-			if floor_id != -1:
+			if floor_id != -1 and floor_id < floors_and_tiles_manager.floors_array.size():
 				var target_floor = floors_and_tiles_manager.floors_array[floor_id]
 				var start_pos = target_floor.global_transform.origin + Vector3(0, 0.5, 0)
 				spawn_player_on_clients.rpc(p_data, start_pos, floor_id)
-			
-	#if not turn_manager.game_started:
-		#turn_manager.start_game()
 
 @rpc("any_peer", "call_local")
 func set_player_position(player_id: int, position: Vector3):
@@ -207,12 +420,10 @@ func set_player_position(player_id: int, position: Vector3):
 	else:
 		print("RPC warning: Could not find spawned player %d to set position." % player_id)
 
-# This command is sent from the host to everyone to create a character.
 @rpc("any_peer", "call_local")
 func spawn_player_on_clients(p_data: Dictionary, position: Vector3, initial_floor_id: int):
 	var player_id = p_data["id"]
 
-	# This check prevents a character from being spawned twice on the same machine.
 	if spawned_players.has(player_id):
 		return
 	
@@ -228,15 +439,6 @@ func spawn_player_on_clients(p_data: Dictionary, position: Vector3, initial_floo
 	player_instance.global_transform.origin = position
 	player_instance.set_initial_floor(initial_floor_id)
 
-	# Set the initial floor occupancy on all clients
-	#if initial_floor_id != -1 and initial_floor_id < floors_and_tiles_manager.floors_array.size():
-		#var initial_floor_node = floors_and_tiles_manager.floors_array[initial_floor_id]
-		#initial_floor_node.occupied_by_player = player_instance
-	#
-	#if player_id == multiplayer.get_unique_id():
-		#current_player_node = player_instance
-
-# This command is sent from the host to everyone to remove a character.
 @rpc("any_peer", "call_local")
 func despawn_player_on_clients(player_id: int):
 	if spawned_players.has(player_id):

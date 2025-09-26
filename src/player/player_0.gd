@@ -9,19 +9,20 @@ var _target_floor_id: int = -1
 var _network_position := Vector3.ZERO
 var _network_rotation := Vector3.ZERO
 
-@onready var player_mesh = $PlayerMesh
-@onready var player_collision = $PlayerCollision
-@onready var player_name = $PlayerName
 @onready var main = get_node("/root/Main")
 @onready var astar_map = get_node("/root/Main/AstarMap")
 @onready var characters_manager = get_node("/root/Main/CharactersManager")
+@onready var marker_camera = $MarkerCamera
+@onready var player_mesh = $PlayerMesh
+@onready var player_collision = $PlayerCollision
+@onready var player_name = $PlayerName
 @onready var float_actions_gui = $float_actions_gui
 
 var move_speed: float = 4.0
 var path: Array = []
 var current_path_index: int = 0
 var is_second_lap: bool = false
-var is_player_already_move: bool = false
+#var is_player_already_move: bool = false
 
 var has_moved_this_turn: bool = false
 var has_used_action_this_turn: bool = false
